@@ -741,7 +741,9 @@ internal static class NetMapPageSmoke
         var body = (Grid)page.FindName("MapBody");
         var card = (FrameworkElement)page.FindName("MapCard");
         var map = (FrameworkElement)page.FindName("MapView");
+        var mapSurface = (FrameworkElement)page.FindName("MapSurface");
         var route = (FrameworkElement)page.FindName("RoutePanel");
+        var routeSurface = (FrameworkElement)page.FindName("RouteSurface");
         var description = (TextBlock)page.FindName("MapDescription");
         CheckMapHeader(page, scenario);
         ScrollViewer outerScroll = null;
@@ -759,6 +761,11 @@ internal static class NetMapPageSmoke
             scenario + ": map, MTR and details belong to the page's bounded scrolling viewport.");
         var mapBounds = Bounds(map, body);
         var routeBounds = Bounds(route, body);
+        var mapSurfaceBounds = Bounds(mapSurface, body);
+        var routeSurfaceBounds = Bounds(routeSurface, body);
+        Require(Math.Abs(mapSurface.ActualHeight - routeSurface.ActualHeight) <= 1 &&
+            Math.Abs(route.ActualHeight - routeSurface.ActualHeight) <= 1,
+            scenario + ": the visible MTR surface fills the same height as the map.");
         bool stacked = Grid.GetRow(route) == 1;
         Require(mapBounds.Left >= -1 && mapBounds.Right <= body.ActualWidth + 1 &&
             routeBounds.Left >= -1 && routeBounds.Right <= body.ActualWidth + 1,
@@ -777,6 +784,9 @@ internal static class NetMapPageSmoke
         {
             Require(routeBounds.Left >= mapBounds.Right + 10 && Math.Abs(mapBounds.Top - routeBounds.Top) <= 2,
                 scenario + ": the map and MTR table occupy separate columns without overlap.");
+            Require(Math.Abs(mapSurfaceBounds.Top - routeSurfaceBounds.Top) <= 1 &&
+                Math.Abs(mapSurfaceBounds.Bottom - routeSurfaceBounds.Bottom) <= 1,
+                scenario + ": the visible map and MTR borders align at both the top and bottom.");
         }
 
         Require(description.TextWrapping == TextWrapping.Wrap && description.TextTrimming == TextTrimming.None &&

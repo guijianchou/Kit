@@ -178,7 +178,14 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage, ILiveL
         UpdateOperationPulse();
     }
 
-    private void OnActualThemeChanged(FrameworkElement sender, object args) => ApplyPrimaryActionPalette((WingetWorkspace)ViewModel.ActiveTabIndex);
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        ApplyPrimaryActionPalette((WingetWorkspace)ViewModel.ActiveTabIndex);
+        if (activeDialog != null)
+        {
+            activeDialog.RequestedTheme = ActualTheme;
+        }
+    }
 
     private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
     {
@@ -779,7 +786,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage, ILiveL
 
     private async Task ShowPreparedConfirmationAsync(WingetPreparedOperation prepared)
     {
-        var dialog = new WingetConfirmationDialog(prepared, DescribeOptions(prepared.Options));
+        var dialog = new WingetConfirmationDialog(prepared, DescribeOptions(prepared.Options), () => DescribeOptions(prepared.Options));
         if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary || disposed || !currentPage)
         {
             return;

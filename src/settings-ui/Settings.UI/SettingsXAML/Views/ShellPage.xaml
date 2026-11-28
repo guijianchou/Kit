@@ -107,16 +107,19 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style x:Key="AiUsageScopeButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+            <!-- Fill under the rounded stroke so its antialiased inner edge cannot reveal the backdrop. -->
+            <Setter Property="BackgroundSizing" Value="OuterBorderEdge" />
             <Setter Property="MinHeight" Value="26" />
             <Setter Property="MinWidth" Value="0" />
-            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Padding" Value="9,2" />
             <Setter Property="CornerRadius" Value="13" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="2" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="FontSize" Value="{ThemeResource KitFontSize12}" />
             <Setter Property="services:TypographyResources.BaseFontSize" Value="12" />
         </Style>
         <Style x:Key="AiUsageTabButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+            <Setter Property="BackgroundSizing" Value="OuterBorderEdge" />
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -401,11 +404,12 @@
                                         <StackPanel x:Name="AiUsageHeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <Border
                                                 x:Name="AiUsageLivePill"
+                                                BackgroundSizing="OuterBorderEdge"
                                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                BorderThickness="1"
+                                                BorderThickness="2"
                                                 CornerRadius="12"
-                                                Padding="8,3"
+                                                Padding="7,2"
                                                 VerticalAlignment="Center">
                                                 <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                                                     <Ellipse
@@ -552,10 +556,12 @@
                                     <!-- Live Running Banner (shown on Overview/Models while Codex is running) -->
                                     <Button
                                         x:Name="AiUsageLiveBannerButton"
+                                        BackgroundSizing="OuterBorderEdge"
                                         Visibility="Collapsed"
                                         Style="{StaticResource KitInteractiveCardButtonStyle}"
                                         BorderBrush="{ThemeResource KitUsageDiskBrush}"
-                                        Padding="10,8"
+                                        BorderThickness="2"
+                                        Padding="9,7"
                                         Click="AiUsageLiveBannerButton_Click">
                                         <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>

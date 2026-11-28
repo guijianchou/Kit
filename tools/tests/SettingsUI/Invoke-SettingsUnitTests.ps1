@@ -83,6 +83,7 @@ $fileNames = @(
     (Join-Path $aiHubRoot 'secrets.dat'),
     (Join-Path $aiHubRoot 'security.md'),
     (Join-Path $aiHubRoot 'chains\security-audit\AGENTS.md'),
+    (Join-Path $aiHubRoot 'chains\windows-stability-report\AGENTS.md'),
     (Join-Path $aiHubRoot 'chains\system-optimization\AGENTS.md'),
     (Join-Path $aiHubRoot 'chains\self-test\AGENTS.md'),
     (Join-Path $aiHubRoot 'State\audit_history.json'),

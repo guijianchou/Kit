@@ -14,6 +14,49 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class AuditReportPresentationTests
 {
     [TestMethod]
+    public void StructuredReportSectionsRetainActionsAndDistinguishCompletedFromPendingAudits()
+    {
+        var completed = Scan(20, 7, 75);
+        completed.AnalysisOutcome = "ok";
+        completed.UsedModel = "review-model";
+        completed.Findings = [new() { Key = "driver", Title = "Driver failure", Severity = "High", RemediationPlan = Plan("Check installed driver") }];
+        var pending = Scan(21, 2, 45);
+        pending.AnalysisOutcome = "pending";
+        pending.UsedModel = "not-completed";
+        var previous = Scan(12, 7, 80);
+        previous.AnalysisOutcome = "ok";
+        previous.UsedModel = "baseline-model";
+        var report = AuditPeriodReport.From([previous, completed, pending], new(2026, 11, 22), TimeZoneInfo.Utc, false);
+
+        Assert.AreEqual(1, report.CompletedAiAudits);
+        Assert.AreEqual(1, report.IncompleteAiAudits);
+        Assert.AreEqual(pending.Timestamp, report.LatestSavedAt);
+        CollectionAssert.AreEqual(new[] { "review-model" }, report.Models.ToArray());
+        var sections = report.OverviewSections(false);
+        Assert.AreEqual(9, sections.Count);
+        Assert.AreEqual("System stability assessment", sections[0].Title);
+        StringAssert.Contains(sections.Single(section => section.Title.StartsWith("Priority actions", StringComparison.Ordinal)).Text, "Check installed driver");
+        StringAssert.Contains(sections.Single(section => section.Title == "Report scope").Text, "incomplete AI audits: 1");
+        Assert.IsTrue(sections.All(section => !string.IsNullOrWhiteSpace(section.Text)));
+        foreach (var section in sections)
+        {
+            StringAssert.Contains(report.FormatOverview(false), section.Text);
+        }
+    }
+
+    [TestMethod]
+    public void EmptyPeriodHasAnExplicitReportSectionWithoutInventedAiCompletion()
+    {
+        var report = AuditPeriodReport.From([], new(2026, 11, 22), TimeZoneInfo.Utc, false);
+        Assert.IsNull(report.LatestSavedAt);
+        Assert.AreEqual(0, report.CompletedAiAudits);
+        Assert.AreEqual(0, report.Models.Count);
+        Assert.AreEqual(1, report.OverviewSections(false).Count);
+        StringAssert.Contains(report.OverviewSections(false).Single().Text, "No saved audits");
+        StringAssert.Contains(report.OverviewSections(true).Single().Text, "没有保存的审计记录");
+    }
+
+    [TestMethod]
     public void MixedScanWindowsNeverProduceAnImprovementClaim()
     {
         var report = AuditPeriodReport.From([Scan(12, 30, 50), Scan(20, 2, 95)], new(2026, 11, 22), TimeZoneInfo.Utc, false);
@@ -115,11 +158,126 @@ public sealed class AuditReportPresentationTests
         Assert.IsFalse(overview.Contains("English finding 199", StringComparison.Ordinal));
         StringAssert.Contains(overview, "本期总评");
         StringAssert.Contains(overview, "处理与验证");
-        StringAssert.Contains(overview, "5 项");
+        StringAssert.Contains(overview, "3 项");
         StringAssert.Contains(details, "English finding 199");
         StringAssert.Contains(details, "Inspect the supplied component");
         StringAssert.Contains(details, "Unconfirmed cause");
         Assert.IsTrue(details.Length > 800000, "The complete export must retain the original steps.");
+    }
+
+    [TestMethod]
+    public void StabilityHighlightsRetainEarlierSignalsWithoutCountingSecurityAsInstability()
+    {
+        var first = Scan(20, 2, 40);
+        first.Findings =
+        [
+            new() { Key = "security", Category = "Security", Severity = "High", Title = "Security observation", Occurrences = 900 },
+            new()
+            {
+                Key = "crash", Category = "Stability", Severity = "High", Title = "Driver crash", Source = "CrashProvider", EventId = "1001", Affected = "driver.dll",
+                Description = "The saved event reports a crash", RootCause = "Unconfirmed cause must not become an observed fact", RemediationPlan = Plan("Read the crash event"),
+            },
+        ];
+        var empty = Scan(20, 2, 100);
+        empty.Timestamp = first.Timestamp.AddHours(3);
+        var report = AuditPeriodReport.From([first, empty], new(2026, 11, 22), TimeZoneInfo.Utc, false);
+        var highlights = report.Highlights(false);
+
+        Assert.AreEqual(100, report.Days.Single().HealthScore);
+        Assert.AreEqual(7, report.TrendDays.Count);
+        Assert.AreEqual(6, report.TrendDays.Count(day => day.Scans == 0 && day.Stability is null && day.High is null));
+        var observed = report.TrendDays.Single(day => day.Scans > 0);
+        Assert.AreEqual(1, observed.Stability);
+        Assert.AreEqual(2, observed.High);
+        Assert.AreEqual(2, observed.Scans);
+        Assert.AreEqual("Priority stability signals need verification", highlights.Assessment);
+        StringAssert.Contains(highlights.AssessmentDetail, "1 stability-related issue groups");
+        Assert.AreEqual("Driver crash", highlights.Priorities[0].Title);
+        Assert.AreEqual("driver.dll", highlights.Components.Single().Label);
+        Assert.AreEqual(1, highlights.Components.Single().Count);
+        Assert.AreEqual(first.Timestamp, highlights.Priorities[0].Issue.LastObservedAt);
+        StringAssert.Contains(highlights.Priorities[0].Check, "Read the crash event");
+        StringAssert.Contains(highlights.Priorities[0].Action, "Repair only if");
+        StringAssert.Contains(highlights.Priorities[0].Verification, "Repeat the original operation");
+        Assert.IsFalse(highlights.Priorities.Any(item => item.Evidence.Contains("Unconfirmed cause", StringComparison.Ordinal)));
+        StringAssert.Contains(report.FormatOverview(false), "No saved scan");
+        StringAssert.Contains(report.FormatOverview(false), "not crash counts");
+    }
+
+    [TestMethod]
+    public void CurrentEvidenceAssessmentDoesNotBorrowBaselineGapsOrAHealthScore()
+    {
+        var baseline = Scan(12, 7, 40);
+        baseline.ScanStart = null;
+        baseline.CollectionProfile = null;
+        var current = Enumerable.Range(16, 7).Select(day => Scan(day, 2, 100)).ToArray();
+        current[0].Findings = [new() { Key = "login", Category = "Security", Severity = "High", Title = "Login anomaly" }];
+        var report = AuditPeriodReport.From([baseline, .. current], new(2026, 11, 22), TimeZoneInfo.Utc, false) with { HistoryIncomplete = true };
+
+        Assert.AreEqual(1, report.Coverage.UnknownWindowScans);
+        Assert.AreEqual(0, report.CurrentCoverage.UnknownWindowScans);
+        Assert.AreEqual("No explicit stability signals in saved observations", report.Highlights(false).Assessment);
+        Assert.AreEqual(0, report.Highlights(false).Components.Count);
+        Assert.AreEqual(1, report.Highlights(false).Severities.Single(item => item.Label == "High").Count);
+
+        current[6].EvidenceIncomplete = true;
+        report = AuditPeriodReport.From(current, new(2026, 11, 22), TimeZoneInfo.Utc, false);
+        Assert.AreEqual("Evidence is insufficient to assess stability", report.Highlights(false).Assessment);
+        Assert.IsTrue(report.TrendDays.Single(day => day.Date.Day == 22).EvidenceLimited);
+        Assert.AreEqual(100, report.Days[0].HealthScore, "A perfect last-scan score must not hide incomplete evidence.");
+    }
+
+    [TestMethod]
+    public void DistributionsCountDistinctGroupsAndPrioritySummariesStayBounded()
+    {
+        var first = Scan(20, 7, 80);
+        first.Findings = Enumerable.Range(0, 30).Select(index => new AuditIssueEnhanced
+        {
+            Key = "stable-" + index, Category = "Reliability", Severity = index < 3 ? "High" : "Medium",
+            Title = "Component observation " + index, Affected = "example.dll", Occurrences = 10000,
+            RemediationPlan = Plan("Inspect the original observation"),
+        }).ToList();
+        var repeat = Scan(21, 7, 80);
+        repeat.Findings = first.Findings;
+        var report = AuditPeriodReport.From([first, repeat], new(2026, 11, 22), TimeZoneInfo.Utc, false);
+        var highlights = report.Highlights(false);
+
+        Assert.AreEqual(30, report.Issues.Count);
+        Assert.AreEqual(30, highlights.Categories.Sum(item => item.Count));
+        Assert.AreEqual(30, highlights.Severities.Sum(item => item.Count));
+        Assert.AreEqual(30, highlights.Components.Single().Count);
+        Assert.AreEqual(3, highlights.Priorities.Count);
+        Assert.IsTrue(highlights.Priorities.All(item => item.NeedsAttention));
+        Assert.IsTrue(report.TrendDays.Where(day => day.Scans > 0).All(day => day.Stability == 30));
+        StringAssert.Contains(highlights.Changes, "No recorded baseline");
+    }
+
+    [TestMethod]
+    public void PriorityHighlightsReserveOneStabilitySignalWithoutDisplacingTheLeadingHighRisks()
+    {
+        var snapshot = Scan(20, 7, 60);
+        snapshot.Findings =
+        [
+            new() { Key = "security", Category = "Security", Severity = "High", Title = "Priority security issue" },
+            new() { Key = "configuration", Category = "Configuration", Severity = "High", Title = "Priority configuration issue" },
+            new() { Key = "network", Category = "NetworkSecurity", Severity = "High", Title = "Additional high issue" },
+            new() { Key = "reliability", Category = "Reliability", Severity = "Medium", Title = "Repeated reliability signal" },
+            new() { Key = "stability-low", Category = "Stability", Severity = "Low", Title = "Low stability signal" },
+        ];
+        var report = AuditPeriodReport.From([snapshot], new(2026, 11, 22), TimeZoneInfo.Utc, false);
+        var priorities = report.Highlights(false).Priorities;
+
+        Assert.AreEqual(3, priorities.Count);
+        CollectionAssert.AreEqual(new[] { "security", "configuration", "reliability" }, priorities.Select(item => item.Issue.Latest.Key).ToArray());
+        Assert.IsTrue(priorities.Take(2).All(item => item.Issue.Latest.IsHigh));
+        Assert.IsTrue(priorities[2].NeedsAttention);
+
+        snapshot.Findings.RemoveAt(3);
+        priorities = AuditPeriodReport.From([snapshot], new(2026, 11, 22), TimeZoneInfo.Utc, false).Highlights(false).Priorities;
+        Assert.AreEqual(3, priorities.Count);
+        Assert.IsTrue(priorities.Take(2).All(item => item.Issue.Latest.IsHigh));
+        Assert.AreEqual("stability-low", priorities[2].Issue.Latest.Key);
+        Assert.IsFalse(priorities[2].NeedsAttention, "A reserved low-risk stability signal remains an observation, not a promoted high-risk action.");
     }
 
     [TestMethod]

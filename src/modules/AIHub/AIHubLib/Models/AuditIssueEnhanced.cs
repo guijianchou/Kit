@@ -9,6 +9,11 @@ public sealed class AuditIssueEnhanced : AuditIssue
 {
     private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The most severe level in the referenced raw events, never supplied by the AI.</summary>
+    [JsonPropertyName("observedEventLevel")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ObservedEventLevel { get; set; }
+
     public bool IsHigh => string.Equals(Severity, "High", StringComparison.OrdinalIgnoreCase);
     public bool IsMedium => string.Equals(Severity, "Medium", StringComparison.OrdinalIgnoreCase);
     public bool IsLow => string.Equals(Severity, "Low", StringComparison.OrdinalIgnoreCase);
@@ -221,6 +226,7 @@ public sealed class AuditIssueEnhanced : AuditIssue
         Title = baseIssue.Title;
         Description = baseIssue.Description;
         Severity = baseIssue.Severity;
+        ObservedEventLevel = (baseIssue as AuditIssueEnhanced)?.ObservedEventLevel;
         Confidence = baseIssue.Confidence;
         Category = baseIssue.Category;
         Affected = baseIssue.Affected;

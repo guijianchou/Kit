@@ -26,11 +26,23 @@ function Get-AiHubDerivedFixtureFiles([string]$StateDirectory) {
             $item.FullName
         }
     }
+    $weeklyScans = Assert-AiHubFixturePath (Join-Path $root 'weekly-scans') $root
+    if (Test-Path -LiteralPath $weeklyScans) {
+        if (-not (Get-Item -LiteralPath $weeklyScans).PSIsContainer) { throw 'Expected a weekly scan snapshot directory.' }
+        foreach ($item in Get-ChildItem -LiteralPath $weeklyScans -Force) {
+            if ($item.Name -match '^weekly-scan-\d{4}-\d{2}-\d{2}\.json(?:\.[a-fA-F0-9]{32}\.tmp)?$') {
+                $null = Assert-AiHubFixturePath $item.FullName $root
+                if ($item.PSIsContainer) { throw 'Expected a regular weekly scan snapshot.' }
+                $item.FullName
+            }
+        }
+    }
     $reports = Assert-AiHubFixturePath (Join-Path $root 'reports') $root
     if (-not (Test-Path -LiteralPath $reports)) { return }
     if (-not (Get-Item -LiteralPath $reports).PSIsContainer) { throw 'Expected an AI Hub report directory.' }
     foreach ($item in Get-ChildItem -LiteralPath $reports -Force) {
-        if ($item.Name -match '^(?:daily-summary\.json|(?:weekly|monthly)-\d{4}-\d{2}-\d{2}\.md)(?:\.[a-fA-F0-9]{32}\.tmp)?$') {
+        if ($item.Name -match '^(?:daily-summary\.json|(?:weekly|monthly)-\d{4}-\d{2}-\d{2}\.md)(?:\.[a-fA-F0-9]{32}\.tmp)?$' -or
+            $item.Name -match '^stability-(?:weekly-(?:(?:fast|full)-)?|monthly-)\d{4}-\d{2}-\d{2}(?:\.md|-[a-f0-9]{32}(?:-(?:zh|en)\.md|(?:-(?:zh|en))?(?:-(?:light|dark)-v[1-9][0-9]*)?\.png))(?:\.[a-fA-F0-9]{32}\.tmp)?$') {
             $null = Assert-AiHubFixturePath $item.FullName $root
             if ($item.PSIsContainer) { throw 'Expected a regular generated AI Hub report.' }
             $item.FullName
@@ -41,6 +53,7 @@ function Get-AiHubDerivedFixtureFiles([string]$StateDirectory) {
 function New-AiHubDerivedStateSnapshot([string]$StateDirectory) {
     $root = Assert-AiHubFixturePath $StateDirectory $StateDirectory
     $reports = Assert-AiHubFixturePath (Join-Path $root 'reports') $root
+    $weeklyScans = Assert-AiHubFixturePath (Join-Path $root 'weekly-scans') $root
     $files = @{}
     foreach ($path in @(Get-AiHubDerivedFixtureFiles $root)) {
         $files[$path] = [IO.File]::ReadAllBytes($path)
@@ -48,8 +61,10 @@ function New-AiHubDerivedStateSnapshot([string]$StateDirectory) {
     return [pscustomobject]@{
         StateDirectory = $root
         ReportsDirectory = $reports
+        WeeklyScansDirectory = $weeklyScans
         StateExisted = (Test-Path -LiteralPath $root)
         ReportsExisted = (Test-Path -LiteralPath $reports)
+        WeeklyScansExisted = (Test-Path -LiteralPath $weeklyScans)
         Files = $files
     }
 }
@@ -88,7 +103,7 @@ function Restore-AiHubDerivedStateFixture($Snapshot) {
     }
     $remaining = @(Get-AiHubDerivedFixtureFiles $Snapshot.StateDirectory)
     if ($remaining.Count -ne $Snapshot.Files.Count) { $failures.Add('AI Hub derived-state file count was not restored.') }
-    foreach ($entry in @(@($Snapshot.ReportsDirectory, $Snapshot.ReportsExisted), @($Snapshot.StateDirectory, $Snapshot.StateExisted))) {
+    foreach ($entry in @(@($Snapshot.ReportsDirectory, $Snapshot.ReportsExisted), @($Snapshot.WeeklyScansDirectory, $Snapshot.WeeklyScansExisted), @($Snapshot.StateDirectory, $Snapshot.StateExisted))) {
         $directory = [string]$entry[0]
         if (-not $entry[1] -and (Test-Path -LiteralPath $directory)) {
             try {

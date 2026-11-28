@@ -5,10 +5,13 @@ param(
     [string]$Language = 'en-us',
     [string]$RuntimeRoot,
     [ValidateSet('Light', 'Dark')]
-    [string]$HistoryPreview
+    [string]$HistoryPreview,
+    [ValidateSet('Light', 'Dark')]
+    [string]$ConfirmationPreview
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'TestCrashLogFixture.ps1')
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
@@ -17,7 +20,7 @@ $reportRoot = Join-Path $repoRoot "TestResults\WingetPage\$Configuration\$Langua
 Write-Host "Winget page smoke report: $reportRoot"
 $testName = 'WingetPageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $RuntimeRoot ($testName + $_) }
-if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.WingetService,WingetPageSmoke,winget -ErrorAction SilentlyContinue).Count) {
+if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.AIHubWorker,Kit.WingetService,WingetPageSmoke,AiHubUxSmoke,winget -ErrorAction SilentlyContinue).Count) {
     throw 'Close Kit and WinGet before running the isolated page smoke test.'
 }
 if ((Get-Item -LiteralPath $RuntimeRoot).Attributes -band [IO.FileAttributes]::ReparsePoint) {
@@ -43,7 +46,7 @@ $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Ho
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
 $backups = @{}
-foreach ($name in @('settings.json', 'settings-placement.json', 'language.json', 'log_settings.json', 'Winget\settings.json', 'Winget\State\service-state.json', 'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md', 'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md')) {
+foreach ($name in @('settings.json', 'settings-placement.json', 'language.json', 'log_settings.json', 'Winget\settings.json', 'Winget\State\service-state.json', 'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md', 'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\windows-stability-report\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md')) {
     $path = Join-Path $env:LOCALAPPDATA "Kit\$name"
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
 }
@@ -55,8 +58,11 @@ $previousTmp = $env:TMP
 $previousOutput = $env:KIT_WINGET_PAGE_TEST_OUTPUT
 $previousLanguage = $env:KIT_WINGET_PAGE_TEST_LANGUAGE
 $previousHistoryPreview = $env:KIT_WINGET_HISTORY_PREVIEW
+$previousConfirmationPreview = $env:KIT_WINGET_CONFIRMATION_PREVIEW
+$crashLogSnapshot = New-TestCrashLogSnapshot (Join-Path $env:LOCALAPPDATA 'Kit') $reportRoot
 $testProcess = $null
 try {
+    Clear-TestCrashLogFixture $crashLogSnapshot
     $env:TEMP = $testTemp
     $env:TMP = $testTemp
     # Persisted module state remains disabled. Enabled synthetic layout fixtures
@@ -104,12 +110,19 @@ try {
     $env:KIT_WINGET_PAGE_TEST_OUTPUT = $reportRoot
     $env:KIT_WINGET_PAGE_TEST_LANGUAGE = $Language
     if ($HistoryPreview) { $env:KIT_WINGET_HISTORY_PREVIEW = $HistoryPreview }
+    if ($ConfirmationPreview) { $env:KIT_WINGET_CONFIRMATION_PREVIEW = $ConfirmationPreview }
     $historyPreviewEnabled = $env:KIT_WINGET_HISTORY_PREVIEW -and $env:KIT_WINGET_HISTORY_PREVIEW -notin @('0', 'false')
-    $timeoutSeconds = if ($historyPreviewEnabled) { 330 } else { 120 }
+    $confirmationPreviewEnabled = $env:KIT_WINGET_CONFIRMATION_PREVIEW -and $env:KIT_WINGET_CONFIRMATION_PREVIEW -notin @('0', 'false')
+    $timeoutSeconds = 120 + $(if ($historyPreviewEnabled) { 210 } else { 0 }) + $(if ($confirmationPreviewEnabled) { 210 } else { 0 })
     if ($historyPreviewEnabled) {
         Write-Host "History preview ready marker: $(Join-Path $reportRoot 'history-preview.ready.json')"
         Write-Host "Create/remove $(Join-Path $reportRoot 'history-preview.shift') to switch the temporary background between states B/A."
         Write-Host "Create $(Join-Path $reportRoot 'history-preview.continue') after native capture to continue the smoke test."
+    }
+    if ($confirmationPreviewEnabled) {
+        Write-Host "Confirmation preview ready marker: $(Join-Path $reportRoot 'confirmation-preview.ready.json')"
+        Write-Host "Create/remove $(Join-Path $reportRoot 'confirmation-preview.shift') to switch the temporary background between states B/A."
+        Write-Host "Create $(Join-Path $reportRoot 'confirmation-preview.continue') after native capture to continue; package acceptance is blocked."
     }
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("\\.\pipe\KitWingetSmokeRunner-$pipeSuffix", "\\.\pipe\KitWingetSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
@@ -128,6 +141,9 @@ try {
         if ($historyPreviewEnabled -and (Test-Path -LiteralPath (Join-Path $reportRoot 'history-preview.ready.json'))) {
             Write-Host "History preview reached; see $harnessLog for the active pause state."
         }
+        if ($confirmationPreviewEnabled -and (Test-Path -LiteralPath (Join-Path $reportRoot 'confirmation-preview.ready.json'))) {
+            Write-Host "Confirmation preview reached; see $harnessLog for the active pause state."
+        }
     }
     if (-not $testProcess.HasExited) {
         if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 10 }
@@ -142,10 +158,17 @@ try {
     $stateBefore = if ($null -ne $backups[$statePath]) { [Convert]::ToBase64String($backups[$statePath]) } else { $null }
     if ($stateAfter -ne $stateBefore) { throw 'The isolated page smoke changed Winget service state.' }
 } finally {
-    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
+    $crashLogRestoreFailure = $null
+    try {
+        if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
+    } finally {
+        try { Restore-TestCrashLogFixture $crashLogSnapshot }
+        catch { $crashLogRestoreFailure = $_ }
+    }
     $env:KIT_WINGET_PAGE_TEST_OUTPUT = $previousOutput
     $env:KIT_WINGET_PAGE_TEST_LANGUAGE = $previousLanguage
     $env:KIT_WINGET_HISTORY_PREVIEW = $previousHistoryPreview
+    $env:KIT_WINGET_CONFIRMATION_PREVIEW = $previousConfirmationPreview
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
     foreach ($path in $backups.Keys) {
@@ -162,4 +185,5 @@ try {
             throw "Original configuration was not restored: $path"
         }
     }
+    if ($crashLogRestoreFailure) { throw $crashLogRestoreFailure }
 }

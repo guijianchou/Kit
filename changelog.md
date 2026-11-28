@@ -4,6 +4,21 @@
 
 ## English
 
+### 3.8.0 (2026-11-28)
+
+Consolidates all changes since 3.6.8, including the work previously listed under the unreleased 3.6.9 entry.
+
+- **Critical/Error risk floor:** Windows Critical (level 1) and Error (level 2) evidence always produces at least High risk in local rules and the final AI assessment. AI may explain or group these events but cannot downgrade or silently discard them; omitted high-risk evidence remains visible. Validate primary and related evidence references before applying AI findings. Prioritize Critical evidence over repeated Error events in summaries, while still allowing AI to correct warning/information findings. Restore the floor for saved findings with an observed level or an exactly matching seven-day raw snapshot, without another model call; do not guess from mismatched historical evidence. Summary wording now describes the scan's actual risk coverage.
+- **Independent seven-day reports:** separate weekly reports from audit Full Scan, with their own service, progress, cancellation and mode caches. Fast reuses a saved exact-seven-day scan without collection or AI calls. Full independently collects the current seven days of System/Application/Setup levels 1–4, excludes Security, and uses the configured AI Service model, effort and context; the saved scan is reference material. Compare only with matching saved baselines. Failed, partial, degraded, fallback-model or configuration-changed reviews cannot replace a complete report. Remove the monthly action while retaining legacy document compatibility.
+- **Evidence-led stability assessment:** report kernel/power failures, hardware/display/storage errors, sleep/resume, service/update changes and warning noise with counts and coverage limits. Group 41/6008 shutdown evidence and application crashes by process/module/exception/offset. Distinguish healthy NTFS notices from faults. Present the weekly verdict, trends, newly observed problems, prioritized remedies and blind spots; missing coverage and omitted baseline groups remain unknown rather than healthy zeros. Maintain the dedicated bilingual `AGENTS.md` template in the weekly policy editor while preserving custom policy content.
+- **Markdown and Mica presentation:** save matching Chinese and English Markdown first, then render the corresponding PNG dashboard with daily charts, shutdown/sleep timelines, crash comparisons and warning heatmaps. Reports follow the interface/system language and share one evidence version. Unify the title bar, controls, image header and footer in light and dark themes; transparent image gutters expose the Mica surface. Reuse unchanged recent reports and their images; explicit Full updates recollect and analyze.
+- **Visible report generation:** replace the blank report body during generation with animated progress, the current collection/analysis/rendering stage and elapsed time. Keep cancellation, failure and retry states visible, and preserve the previous preview while updating. Restore the Full scan button's accent/disabled state correctly after navigation or background completion.
+- **Thirty-day retention and AI Usage:** physically remove expired audit reports, analysis histories, scan snapshots and AI Usage records from their stores. AI Usage opens on the current local day with correct daylight-saving boundaries. Strengthen the selected range, Active indicator and running-session card borders, and fill beneath their rounded strokes to remove the pale/blurred corner fringe in both themes.
+- **Safer temporary cleanup:** expand user-level cleanup to recognized temporary compiler artifacts, Windows Internet cache leaves and dedicated ccache/sccache caches, alongside thumbnails and DirectX shader caches. Generic Temp cleanup preserves source files, unknown content and project trees. Recheck scope before execution and retain age, file-lock, credential/configuration and confirmation protections. Administrator-managed Windows Update, Defender and Delivery Optimization stores remain excluded.
+- **WinGet confirmation and progress:** give package confirmation a continuous theme-aware Acrylic surface. Capture native console progress, show download quantities and reported percentages, and distinguish downloading, installing and verification. Keep indeterminate feedback when an installer supplies no percentage; progress parsing does not determine success. Preserve native installer/UAC and cancellation behavior.
+- **NetMap alignment:** align the MTR route surface with the map in wide and stacked layouts. The hop list fills the space below its header and scrolls internally, including empty, short and long routes.
+- **Regression tooling:** add coverage for weekly evidence, localization, retention, cleanup boundaries, WinGet progress and audit risk floors. Isolate deliberately generated UI smoke exceptions from production crash logs and restore the original log bytes after each fixture.
+
 ### 3.6.8 (2026-11-27)
 
 Consolidates the changes developed in 3.6.4–3.6.8 since the 3.6.3 release.
@@ -1063,6 +1078,21 @@ Consolidates the changes developed in 3.6.4–3.6.8 since the 3.6.3 release.
 ## 中文
 
 ## 更新日志
+
+### 3.8.0（2026-11-28）
+
+合并 3.6.8 之后的全部更新，包括此前暂列在未发布 3.6.9 条目中的改动。
+
+- **Critical/Error 风险下限**：Windows Critical（1 级）和 Error（2 级）证据在本地规则及最终 AI 评估中至少为 High。AI 可以解释或合并事件，但不能降级或静默剔除，遗漏的高风险证据继续显示；主引用和关联引用均需校验。摘要优先展示 Critical，避免被大量重复 Error 挤出，同时保留 AI 对警告/信息事件的纠偏能力。历史记录有可信事件等级或精确匹配的七天原始快照时，可直接恢复风险下限而无需再次调用模型；不拿错配历史证据推断。汇总文案按本次扫描实际覆盖与风险表述。
+- **独立七天周报**：周报与审计 Full Scan 拆分，拥有独立服务、进度、取消和分模式缓存。Fast 复用已保存的完整七天 Scan，不采集、不新增 AI 调用；Full 独立采集本期七天 System/Application/Setup 的 1–4 级事件，不读 Security，并按当前 AI Service 的模型、effort 和上下文配置分析，已有 Scan 仅作为参考。上期对比只用匹配的已有报告；失败、部分完成、降级、备用模型或配置已变化的结果不能覆盖完整报告。移除月报入口，保留旧文档兼容。
+- **基于证据的稳定性评估**：对内核/电源故障、硬件/显示/存储错误、睡眠唤醒、服务/更新变更和警告噪音给出计数与覆盖限制。归并 41/6008 关机证据，按进程/模块/异常码/偏移聚合应用崩溃，区分 NTFS 健康通知与故障。突出本周评级、趋势、新出现的问题、优先处置和盲区；缺失覆盖或基线截断保持未知，不写成健康零值。新增可在周报策略页维护的双语 `AGENTS.md` 模板，并保留自定义策略。
+- **Markdown 与 Mica 展示**：先保存同批证据的中英文 Markdown，再渲染对应 PNG 总板，包含每日图表、掉电/睡眠时间线、崩溃对比和告警热力图。报告随界面/系统语言展示并共享同一证据版本；标题栏、操作区、图像页眉和页脚统一浅色/深色配色，透明间隔呈现 Mica。近期输入未变时复用报告与图像，主动更新 Full 才重新采集并分析。
+- **报告生成可见反馈**：生成过程中不再展示空白正文，改为动画进度、当前采集/分析/渲染阶段和已用时间；取消、失败与重试状态可见，更新期间保留上一份预览。切页或后台完成后，Full scan 按钮正确恢复强调色与实际禁用状态。
+- **30 天保留与 AI Usage**：审计报告、分析历史、Scan 快照和 AI Usage 从存储中实际剔除过期数据。AI Usage 每次打开默认显示本机当日数据，正确处理夏令时日期边界。加强周期选中项、Active 指示和运行中会话卡片的边框，并让背景填满圆角描边下方，消除明暗主题下的发白、发虚边缘。
+- **更安全的临时清理**：在缩略图和 DirectX 着色器缓存基础上，增加明确的临时编译产物、用户 Windows Internet 缓存叶目录及 ccache/sccache 专用缓存。通用 Temp 保留源码、未知内容与项目目录；执行前再次核对范围，继续保留文件年龄、占用、凭据/配置保护及操作确认。管理员管理的 Windows Update、Defender 与传递优化存储仍排除在外。
+- **WinGet 确认窗与进度**：软件确认窗改用跟随主题的连续 Acrylic 半透明材质；捕获原生控制台进度，展示下载量及已报告的百分比，区分下载、安装和结果核对阶段。安装器不提供百分比时使用持续进度反馈，进度解析不决定操作成功与否；保留原生安装器、UAC 和取消行为。
+- **NetMap 对齐**：宽屏及上下堆叠布局中对齐 MTR 链路与地图表面，节点列表填满标题以下空间并内部滚动，覆盖空列表、少量节点与长链路。
+- **回归工具**：补充周报证据、双语、保留周期、清理边界、WinGet 进度及审计风险下限的测试。UI 冒烟测试主动生成的异常与生产 crash 日志隔离，测试后逐字节恢复原始日志。
 
 ### 3.6.8（2026-11-27）
 

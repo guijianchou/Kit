@@ -277,6 +277,8 @@ public sealed class OptimizationAnalysisService
 
     private static bool IsHostProtected(TempFileInfo item) => item.Action == "delete"
         ? OptimizationProtectionPolicy.IsProtectedFromCleanup(item.FilePath)
+            || ((item.EvidenceKind == "temp-residual" || item.Category is "Temporary files" or "Temporary residuals" or "Temporary build files")
+                && !TemporaryCleanupPolicy.IsRecognizedFile(item.FilePath))
         : OptimizationProtectionPolicy.IsSensitiveState(item.FilePath);
 
     private static string ClassifyTempResidualBucket(string ext)

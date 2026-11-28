@@ -362,7 +362,7 @@ public static class AuditRuleEngine
                     recommendation = "1. Update Wi-Fi adapter drivers from the manufacturer website.\n2. Forget the Wi-Fi network in Windows Settings and reconnect.\n3. Run 'netsh winsock reset' in an elevated terminal and reboot.";
                     recommendationZh = "1. 前往网卡芯片厂商官网下载更新无线网卡驱动。\n2. 在 Windows 设置中“忘记此网络”并重新输入密码连接。\n3. 在管理员终端运行 'netsh winsock reset' 重置网络套接字并重启电脑。";
                 }
-                else if (first.Level <= 2)
+                else if (first.Level is 1 or 2)
                 {
                     // 21. General Critical / Error Level
                     severity = "High";
@@ -387,20 +387,9 @@ public static class AuditRuleEngine
                     recommendationZh = $"1. 确认“{provider}”相关功能在日常使用中是否表现正常。\n2. 若系统整体运行平稳，通常属于非阻塞性运行警告，可保持常规观察。\n3. 检查 Windows 更新历史记录，安装待处理的驱动补丁或累积更新。";
                 }
 
-                // Windows event level is a floor, not a hint: a Critical (1) or Error (2)
-                // event must never be reported below the tier its own level implies just
-                // because a rule happened to classify that event ID as Medium or Low. The
-                // rules add context and guidance; the level states how serious Windows
-                // considered it.
-                if (first.Level == 1 && !string.Equals(severity, "High", StringComparison.OrdinalIgnoreCase))
-                {
-                    severity = "High";
-                    category = "Stability";
-                }
-                else if (first.Level == 2 && string.Equals(severity, "Low", StringComparison.OrdinalIgnoreCase))
-                {
-                    severity = "Medium";
-                }
+                // Every observed Critical/Error record establishes a High risk floor,
+                // including a more severe record later in this provider/event group.
+                severity = AuditRiskPolicy.ApplySeverityFloor(severity, g);
 
                 var issue = new AuditIssueEnhanced
                 {
@@ -421,6 +410,7 @@ public static class AuditRuleEngine
                     Description = desc,
                     DescriptionZh = descZh,
                     Severity = severity,
+                    ObservedEventLevel = AuditRiskPolicy.MostSevereLevel(g),
                     Category = category,
                     Affected = provider,
                     RootCause = rootCause,
@@ -435,7 +425,7 @@ public static class AuditRuleEngine
                 issues.Add(issue);
             }
 
-            return issues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).ToList();
+            return AuditRiskPolicy.OrderFindings(issues).ToList();
     }
 
     /// <summary>

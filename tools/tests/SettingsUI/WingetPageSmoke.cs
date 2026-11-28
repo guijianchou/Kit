@@ -129,6 +129,7 @@ internal static class WingetPageSmoke
             await VerifyModuleHeader(page, general);
             await VerifyExpandedSettings(page, general);
             await VerifySemanticPresentation(page);
+            await VerifyOperationProgress(page);
             await VerifyRepeatedStatusStability(page);
             await VerifyIgnoredStateLabel(page);
             await VerifyLatestOperationOutput(page);
@@ -1087,6 +1088,71 @@ internal static class WingetPageSmoke
         Log("Readiness and operation semantic badges update in light/dark themes, preserving controls and mixed-batch failure visibility PASS");
     }
 
+    private static async Task VerifyOperationProgress(WingetPage page)
+    {
+        var vm = page.ViewModel;
+        var bar = (ProgressBar)page.FindName("OperationProgressBar");
+        var text = (TextBlock)page.FindName("OperationProgressText");
+        var shell = (FrameworkElement)App.GetSettingsWindow().Content;
+        var shellThemeBefore = shell.RequestedTheme;
+        var themeBefore = page.RequestedTheme;
+        var running = new WingetQueueItem("fixture-progress", NormalPackage, "upgrade", "Running", null, CheckedAt);
+        var snapshot = Snapshot() with { IsBusy = true, OperationId = "fixture-progress", OperationKind = "queue", Queue = new[] { running } };
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                // Product theme changes apply to the entire window; a page-only
+                // override would render dark text surfaces over a light shell.
+                page.RequestedTheme = ElementTheme.Default;
+                shell.RequestedTheme = theme;
+                Apply(vm, snapshot with { Phase = "Downloading", ProgressPercent = 25, BytesDownloaded = 5UL * 1024 * 1024, BytesRequired = 20UL * 1024 * 1024 });
+                await Settle();
+                Require(shell.ActualTheme == theme && page.ActualTheme == theme,
+                    "Progress captures must use one consistent shell and page theme.");
+                Require(!bar.IsIndeterminate && bar.Value == 25 && text.Text == "25% · 5 MiB / 20 MiB" && text.Visibility == Visibility.Visible,
+                    "Downloads must show the actual percentage and transferred/total bytes outside collapsed details.");
+                Require(vm.OperationDescription.Contains(WingetViewModel.L("Phase_Downloading"), StringComparison.Ordinal), "The current package must expose its download stage.");
+                await CaptureShell($"winget-download-progress-{theme}.png");
+
+                Apply(vm, snapshot with { Phase = "Downloading", ProgressPercent = 100, BytesDownloaded = 20UL * 1024 * 1024, BytesRequired = 20UL * 1024 * 1024 });
+                await Settle();
+                Apply(vm, snapshot with { Phase = "Installing", ProgressPercent = null, BytesDownloaded = null, BytesRequired = null });
+                await Settle();
+                Require(bar.IsIndeterminate && bar.Value == 0 && !text.Text.Contains("100", StringComparison.Ordinal) && !text.Text.Contains("MiB", StringComparison.Ordinal)
+                    && text.Text == WingetViewModel.L("InstallerProgressUnavailable"),
+                    "Installation without reported percentage must reset download completion and show an explicit indeterminate stage.");
+                await CaptureShell($"winget-install-progress-{theme}.png");
+
+                Apply(vm, snapshot with { Phase = "Installing", ProgressPercent = 61 });
+                await Settle();
+                Require(!bar.IsIndeterminate && bar.Value == 61 && text.Text == "61%", "A reported installation percentage must appear in the same progress surface.");
+
+                Apply(vm, snapshot with { Phase = "Downloading", ProgressPercent = null });
+                await Settle();
+                Require(bar.IsIndeterminate && text.Text == WingetViewModel.L("DownloadProgressPending"), "A new package must not inherit the previous package's byte count or percentage.");
+                Apply(vm, snapshot with { Phase = "Downloading", ProgressPercent = null, BytesDownloaded = 5UL * 1024 * 1024 });
+                await Settle();
+                Require(bar.IsIndeterminate && text.Text.Contains("5 MiB", StringComparison.Ordinal) && !text.Text.Contains('%'), "A download with unknown total size shows its transferred amount without inventing a percentage.");
+                Apply(vm, snapshot with { Phase = "Cancelling", ProgressPercent = null });
+                await Settle();
+                Require(!vm.CanCancelOperation && vm.OperationDescription.Contains(WingetViewModel.L("Phase_Cancelling"), StringComparison.Ordinal), "Cancellation remains a pending request until native completion.");
+            }
+
+            Apply(vm, Snapshot());
+            await Settle();
+            Require(text.Text.Length == 0 && !vm.HasOperationProgressText, "Finished operations must clear live progress text.");
+        }
+        finally
+        {
+            shell.RequestedTheme = shellThemeBefore;
+            page.RequestedTheme = themeBefore;
+            Apply(vm, Snapshot());
+            await Settle();
+        }
+        Log("Download bytes/percent, installation known/unknown progress, stage transitions and queue resets in Light/Dark PASS");
+    }
+
     private static async Task VerifyRepeatedStatusStability(WingetPage page)
     {
         var vm = page.ViewModel;
@@ -1415,11 +1481,13 @@ internal static class WingetPageSmoke
         try
         {
             Task showing = (Task)method.Invoke(page, new object[] { prepared });
+            if (showing.IsFaulted) await showing;
             var dialog = (ContentDialog)field.GetValue(page);
             Require(dialog != null && dialog.DefaultButton == ContentDialogButton.Close, "Batch review must default to cancellation.");
             await (Task)method.Invoke(page, new object[] { prepared });
             Require(ReferenceEquals(dialog, field.GetValue(page)), "A duplicate confirmation must not replace the active dialog.");
             await WaitForDialogText(dialog, new[] { LongPackage.Name, NormalPackage.Name, LongPackage.AvailableVersion, "Synthetic first package agreement", "Synthetic second package agreement", WingetViewModel.L("ElevationConfirmation") });
+            await VerifyConfirmationMaterial(page, dialog);
             dialog.Hide();
             await showing;
             Require(vm.Activity == before && !vm.IsBusy && !GetField<bool>(vm, "requestPending"), "Cancelling batch review must send no operation.");
@@ -1432,6 +1500,55 @@ internal static class WingetPageSmoke
         }
         finally { ((ContentDialog)field.GetValue(page))?.Hide(); }
         Log("Batch review shows every package/version/agreement and UAC guidance; duplicate guard, cancel and tab-dismissal PASS");
+    }
+
+    private static async Task VerifyConfirmationMaterial(WingetPage page, ContentDialog dialog)
+    {
+        var originalTheme = page.RequestedTheme;
+        var window = App.GetSettingsWindow();
+        var shell = (FrameworkElement)window.Content;
+        var originalShellTheme = shell.RequestedTheme;
+        var originalSize = window.AppWindow.Size;
+        bool highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                page.RequestedTheme = ElementTheme.Default;
+                shell.RequestedTheme = theme;
+                foreach (var size in new[] { (1000, 800), (720, 570) })
+                {
+                    window.AppWindow.Resize(new Windows.Graphics.SizeInt32(size.Item1, size.Item2));
+                    await Settle();
+                    Require(shell.ActualTheme == theme && page.ActualTheme == theme && dialog.ActualTheme == theme,
+                        "An open confirmation must follow the same whole-window theme as the shell and page.");
+                    var background = Descendants(dialog).OfType<Border>().First(item => item.Name == "BackgroundElement");
+                    var space = (Grid)background.Child;
+                    var command = space.Children.OfType<Grid>().Single(item => item.Name == "CommandSpace");
+                    var content = space.Children.OfType<ScrollViewer>().Single(item => item.Name == "ContentScrollViewer");
+                    Require(dialog.Background is AcrylicBrush { AlwaysUseFallback: false } || highContrast && dialog.Background is SolidColorBrush,
+                        "Confirmation must use real theme acrylic with system high-contrast fallback.");
+                    Require(background.Background == dialog.Background && content.Content is Grid overlay && Transparent(overlay.Background) && Transparent(command.Background),
+                        "Content and buttons must leave the single outer acrylic surface visible.");
+                    var cancel = Descendants(command).OfType<Button>().Single(item => item.Name == "CloseButton");
+                    Require(cancel.IsEnabled && cancel.ActualHeight > 0 && dialog.DefaultButton == ContentDialogButton.Close,
+                        "The cancellation action remains reachable and default at narrow sizes.");
+                    Require(content.VerticalScrollBarVisibility == ScrollBarVisibility.Auto, "Short windows must allow the native content surface to scroll.");
+                    await CaptureShell($"winget-confirmation-{theme}-{size.Item1}.png", dialog);
+                    if (size == (1000, 800))
+                        await WaitForMaterialPreview(page, theme, "confirmation", "KIT_WINGET_CONFIRMATION_PREVIEW", dialog);
+                }
+            }
+        }
+        finally
+        {
+            shell.RequestedTheme = originalShellTheme;
+            page.RequestedTheme = originalTheme;
+            window.AppWindow.Resize(originalSize);
+            await Settle();
+        }
+        Log("Confirmation light/dark acrylic, transparent content/footer, theme propagation and narrow-window cancellation PASS; composition blur requires native capture.");
+        static bool Transparent(Brush brush) => brush == null || brush.Opacity == 0 || brush is SolidColorBrush solid && solid.Color.A == 0;
     }
 
     private static async Task VerifyHistoryCleanupDialog(WingetPage page, SettingsRepository<GeneralSettings> general)
@@ -1621,17 +1738,27 @@ internal static class WingetPageSmoke
             highContrast && brush is SolidColorBrush;
     }
 
-    private static async Task WaitForHistoryPreview(WingetPage page, ElementTheme theme)
+    private static Task WaitForHistoryPreview(WingetPage page, ElementTheme theme)
+        => WaitForMaterialPreview(page, theme, "history", "KIT_WINGET_HISTORY_PREVIEW");
+
+    private static async Task WaitForMaterialPreview(WingetPage page, ElementTheme theme, string kind, string environmentVariable, ContentDialog confirmation = null)
     {
-        string requested = Environment.GetEnvironmentVariable("KIT_WINGET_HISTORY_PREVIEW");
+        string requested = Environment.GetEnvironmentVariable(environmentVariable);
         if (string.IsNullOrWhiteSpace(requested) || requested == "0" || requested.Equals("false", StringComparison.OrdinalIgnoreCase)) return;
         var previewTheme = requested.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? ElementTheme.Dark : ElementTheme.Light;
         if (theme != previewTheme) return;
 
-        string continuePath = Path.Combine(Output, "history-preview.continue");
-        string shiftPath = Path.Combine(Output, "history-preview.shift");
-        string readyPath = Path.Combine(Output, "history-preview.ready.json");
-        var host = page.Content as Panel ?? throw new InvalidOperationException("History preview requires the page's root panel.");
+        string label = kind.ToUpperInvariant() + " PREVIEW";
+        string continuePath = Path.Combine(Output, kind + "-preview.continue");
+        string shiftPath = Path.Combine(Output, kind + "-preview.shift");
+        string readyPath = Path.Combine(Output, kind + "-preview.ready.json");
+        var host = page.Content as Panel ?? throw new InvalidOperationException("Material preview requires the page's root panel.");
+        using var dismissed = new CancellationTokenSource();
+        if (confirmation != null)
+        {
+            confirmation.PrimaryButtonClick += BlockAcceptance;
+            confirmation.Closed += OnDismissed;
+        }
         var stripes = new Grid { IsHitTestVisible = false };
         AutomationProperties.SetAccessibilityView(stripes, AccessibilityView.Raw);
         Canvas.SetZIndex(stripes, 100);
@@ -1665,12 +1792,13 @@ internal static class WingetPageSmoke
             PaintStripes();
             await Settle();
             WriteReady();
-            Log($"HISTORY PREVIEW READY ({theme}, state {(shifted ? "B" : "A")}); create/remove {shiftPath} to switch stripes. Create {continuePath} to continue; automatic continuation after 180 seconds.");
+            EnsureNoWorker();
+            Log($"{label} READY ({theme}, state {(shifted ? "B" : "A")}); create/remove {shiftPath} to switch stripes. Create {continuePath} to continue; automatic continuation after 180 seconds. Synthetic fixture only; package acceptance is blocked.");
             var elapsed = Stopwatch.StartNew();
             int nextProgressSeconds = 30;
-            while (!File.Exists(continuePath) && elapsed.Elapsed < TimeSpan.FromSeconds(180))
+            while (!File.Exists(continuePath) && !dismissed.IsCancellationRequested && elapsed.Elapsed < TimeSpan.FromSeconds(180))
             {
-                await Task.Delay(250);
+                await Task.Delay(250, dismissed.Token);
                 bool requestedShift = File.Exists(shiftPath);
                 if (requestedShift != shifted)
                 {
@@ -1678,21 +1806,34 @@ internal static class WingetPageSmoke
                     PaintStripes();
                     await Settle();
                     WriteReady();
-                    Log($"HISTORY PREVIEW stripe state {(shifted ? "B" : "A")} rendered.");
+                    Log($"{label} stripe state {(shifted ? "B" : "A")} rendered.");
                 }
                 if (elapsed.Elapsed.TotalSeconds >= nextProgressSeconds)
                 {
-                    Log($"HISTORY PREVIEW waiting: {nextProgressSeconds}/180 seconds.");
+                    EnsureNoWorker();
+                    Log($"{label} waiting: {nextProgressSeconds}/180 seconds.");
                     nextProgressSeconds += 30;
                 }
             }
-            Log(File.Exists(continuePath) ? "HISTORY PREVIEW continued by marker." : "HISTORY PREVIEW timed out; continuing functional smoke checks.");
+            Log(File.Exists(continuePath) ? $"{label} continued by marker." : $"{label} ended; continuing functional smoke checks.");
+        }
+        catch (OperationCanceledException) when (dismissed.IsCancellationRequested)
+        {
+            Log($"{label} dismissed without accepting a package operation.");
         }
         finally
         {
+            if (confirmation != null)
+            {
+                confirmation.PrimaryButtonClick -= BlockAcceptance;
+                confirmation.Closed -= OnDismissed;
+            }
             host.Children.Remove(stripes);
             await Settle();
         }
+
+        static void BlockAcceptance(ContentDialog sender, ContentDialogButtonClickEventArgs args) => args.Cancel = true;
+        void OnDismissed(ContentDialog sender, ContentDialogClosedEventArgs args) => dismissed.Cancel();
 
         void PaintStripes()
         {
@@ -1708,6 +1849,8 @@ internal static class WingetPageSmoke
             ShiftFile = shiftPath,
             ContinueFile = continuePath,
             MaximumWaitSeconds = 180,
+            FixtureOnly = true,
+            PackageAcceptanceBlocked = confirmation != null,
         }));
     }
 

@@ -17,7 +17,7 @@ public enum AiUsageTimeRange
 /// <summary>Aggregated Codex usage overview loaded from SQLite storage.</summary>
 public sealed record AiUsageOverview
 {
-    public AiUsageTimeRange Range { get; init; } = AiUsageTimeRange.AllTime;
+    public AiUsageTimeRange Range { get; init; } = AiUsageTimeRange.Today;
     public DateTimeOffset CapturedUtc { get; init; } = DateTimeOffset.UtcNow;
     public string SessionId { get; init; } = string.Empty;
     public string DatabasePath { get; init; } = string.Empty;

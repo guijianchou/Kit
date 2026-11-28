@@ -101,6 +101,18 @@ internal static class AiHubUxSmoke
             new AuditEvidenceSession((_, _, _, _, _) => Task.FromResult(new AuditEvidenceBatch([], [], []))));
         await vm.AiHub.Initialization;
         await WaitUntil(() => !Field<bool>(vm, "_loadingOptimizationHistory"));
+        if (Environment.GetEnvironmentVariable("KIT_STABILITY_LIVE_DOCUMENT") is string liveDocument && !string.IsNullOrEmpty(liveDocument))
+        {
+            await WindowsStabilityUiChecks.RenderSavedAsync(liveDocument, Output);
+            EnsureNoWorker();
+            return;
+        }
+        if (Environment.GetEnvironmentVariable("KIT_STABILITY_REPORT_ONLY") == "1")
+        {
+            await WindowsStabilityUiChecks.RunAsync(page, Output);
+            EnsureNoWorker();
+            return;
+        }
         Require(!vm.IsEnabled && !vm.AiHub.IsEnabled, "AI Hub and shared service must start disabled.");
         Require(!vm.FastScanCommand.CanExecute(null) && !vm.ScanAllCommand.CanExecute(null), "Disabled module must block scans.");
         Require(!vm.CanAnalyzeStorage && !vm.AnalyzeStorageCommand.CanExecute(null), "Disabled module must block local space analysis.");
@@ -118,6 +130,12 @@ internal static class AiHubUxSmoke
         Require(vm.IsEnabled && !vm.AiHub.IsEnabled, "Synthetic selection needs only the local module gate.");
         await CheckScanButtonBoundState(page, "module-enabled");
         await CheckEnableCardAndHealthLayout(page, "module-enabled");
+        await CheckScanButtonNavigation(page);
+        if (Environment.GetEnvironmentVariable("KIT_AIHUB_SCAN_NAV_ONLY") == "1")
+        {
+            EnsureNoWorker();
+            return;
+        }
         await CheckWeeklyReport(page);
         await CheckWorkflowTimers(page);
         await CheckAuditAnalysisLifecycle(page);
@@ -280,74 +298,7 @@ internal static class AiHubUxSmoke
         Log("System diagnosis empty/success/failure rendering, localized advisory report, copy readiness, disabled-module gate and no executable actions PASS; no scan or AI call invoked");
     }
 
-    private static async Task CheckWeeklyReport(AIHubPage page)
-    {
-        var vm = page.ViewModel;
-        var storeField = typeof(AIHubPageViewModel).GetField("_auditHistoryStorage", PrivateInstance);
-        var original = storeField.GetValue(vm);
-        var directory = Directory.CreateTempSubdirectory("KitWeeklyReport-").FullName;
-        var store = new AuditHistoryStorage(directory);
-        var end = (vm.SelectedAuditDate?.Date ?? DateTime.Today).AddHours(12);
-        bool chinese = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh";
-        var history = (DropDownButton)page.FindName("AuditHistoryDropDown");
-        var flyout = (Flyout)history.Flyout;
-        async Task Inspect(bool monthly, string expected, bool canCopy, string coverage = null)
-        {
-            string title = monthly ? vm.MonthlyReportLabel : chinese ? "审计周报" : "Weekly audit report";
-            string automationId = monthly ? "AIHub_MonthlyReportButton" : "AIHub_WeeklyReportButton";
-            flyout.ShowAt(history);
-            await NextRendering();
-            var button = Descendants((FrameworkElement)flyout.Content).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == automationId);
-            Require(Equals(button.Content, title), "The period report action must use the selected language.");
-            ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
-            await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog")?.IsLoaded == true);
-            var dialog = Field<ContentDialog>(page, "_activeDialog");
-            var reportContent = (StackPanel)((ScrollViewer)dialog.Content).Content;
-            var body = (TextBlock)reportContent.Children[0];
-            await WaitUntil(() => body.Text.Contains(expected, StringComparison.Ordinal));
-            Require(Equals(dialog.Title, title) && dialog.PrimaryButtonText == vm.CopyReportLabel && dialog.IsPrimaryButtonEnabled == canCopy && body.IsTextSelectionEnabled,
-                "Copy readiness and the localized dialog must follow the loaded report.");
-            if (coverage != null)
-            {
-                Require(body.Text.Contains(coverage, StringComparison.Ordinal), "The report must state its actual calendar-day coverage.");
-            }
-            if (monthly && canCopy)
-            {
-                Require(body.Text.Contains(end.ToString("yyyy-MM-01"), StringComparison.Ordinal), "The monthly report must start on the first day of the selected month.");
-            }
-            dialog.Hide();
-            await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog") == null);
-        }
-
-        try
-        {
-            storeField.SetValue(vm, store);
-            await Inspect(false, chinese ? "此时段没有保存的审计记录" : "No saved audits in this period", false);
-            await Inspect(true, chinese ? "此时段没有保存的审计记录" : "No saved audits in this period", false);
-            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddMonths(-1).ToUniversalTime(), HealthScore = 60 }, retentionDays: 3650);
-            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddDays(-7).ToUniversalTime(), HealthScore = 55 }, retentionDays: 3650);
-            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.ToUniversalTime(), HealthScore = 80 }, retentionDays: 3650);
-            await Inspect(false, chinese ? "未比较分数趋势" : "Score trend withheld", true, "1/7");
-            int monthDaysObserved = end.AddDays(-7).Month == end.Month ? 2 : 1;
-            await Inspect(true, chinese ? "平均健康分" : "Average health score", true, $"{monthDaysObserved}/{end.Day}");
-            string monthlyExport = Path.Combine(store.ReportsDirectory, $"monthly-{end:yyyy-MM-dd}.md");
-            string savedExport = File.ReadAllText(monthlyExport);
-            File.WriteAllText(Path.Combine(store.ReportsDirectory, "daily-summary.json"), "invalid");
-            await Inspect(false, chinese ? "历史摘要存档无法读取" : "The daily archive could not be read", true, "1/7");
-            await Inspect(true, chinese ? "历史摘要存档无法读取" : "The daily archive could not be read", true, $"{monthDaysObserved}/{end.Day}");
-            Require(File.ReadAllText(monthlyExport) == savedExport, "An unavailable derived archive must preserve the previously saved monthly export.");
-            File.WriteAllText(Path.Combine(directory, "audit_history.json"), "invalid");
-            await Inspect(false, chinese ? "无法读取审计历史" : "Audit history could not be read", false);
-            await Inspect(true, chinese ? "无法读取审计历史" : "Audit history could not be read", false);
-        }
-        finally
-        {
-            Field<ContentDialog>(page, "_activeDialog")?.Hide();
-            storeField.SetValue(vm, original);
-            Directory.Delete(directory, recursive: true);
-        }
-        Log("Weekly/monthly report actions, empty history, calendar coverage, weekly trend, unavailable archive, preserved export, read error and copy-button readiness rendered PASS");
-    }
+    private static Task CheckWeeklyReport(AIHubPage page) => WindowsStabilityUiChecks.RunAsync(page, Output);
 
     private static async Task CheckPoliciesRequestedDuringInitialization()
     {
@@ -1578,7 +1529,7 @@ internal static class AiHubUxSmoke
                 Scope = currentScope,
                 EvidenceFingerprint = (string)typeof(AiHubAuditAnalysisService)
                     .GetMethod("CreateEvidenceFingerprint", BindingFlags.Static | BindingFlags.NonPublic)
-                    .Invoke(null, new object[] { input }),
+                    .Invoke(null, new object[] { input, null }),
             };
             progress.Report(new AiTaskProgress("Execute", "Synthetic model running", 0, 2));
             partial.Report(result with { CompleteEvidenceCoverage = false, IsPartial = true, ValidatedBatchCount = 1 });
@@ -1622,10 +1573,11 @@ internal static class AiHubUxSmoke
             releaseAnalysis.SetResult();
             await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
             Require(active.AnalysisOutcome == "ok" && active.AiAnalysisScope == currentScope && vm.HasAiReport
-                && vm.AiReportSummaryText != previousSummary && vm.AllIssues.Count == 0 && vm.HealthScore == 100
-                && active.Findings.Count == 0 && vm.SidebarWorkflowPercent == 100
+                && vm.AiReportSummaryText != previousSummary && vm.AllIssues.Count == 1 && vm.HighCount == 1 && vm.HealthScore == 85
+                && active.Findings.Count == 1 && active.Findings[0].IsHigh && active.Findings[0].ObservedEventLevel == 1
+                && active.Findings[0].Occurrences == 2 && active.HealthScore == 85 && vm.SidebarWorkflowPercent == 100
                 && active.UsedModel == "test-model" && vm.AiReportMetaText.Contains("test-model · Main", StringComparison.Ordinal),
-                "A complete current-model result must replace the old report, findings, health score and scope before Full scan completes.");
+                "A complete current-model result must update the old report and scope while preserving both observed Critical shutdowns as one High finding and recalculating health before Full scan completes.");
             await Capture(page, "aihub-full-scan-ai-complete.png");
 
             vm.SelectedScanModeIndex = 0;
@@ -2291,7 +2243,7 @@ internal static class AiHubUxSmoke
             AiReportSummary = "Previous successful synthetic assessment", AiReportMeta = "previous metadata",
         };
         string fingerprint = (string)typeof(AiHubAuditAnalysisService).GetMethod("CreateEvidenceFingerprint", BindingFlags.Static | BindingFlags.NonPublic)
-            .Invoke(null, new object[] { events });
+            .Invoke(null, new object[] { events, null });
         var final = new AiHubAuditAnalysisService.AuditAnalysisResult(Array.Empty<AuditIssue>(), false, null)
         {
             CompleteEvidenceCoverage = true, AnalyzedEvents = 1, Scope = "current-synthetic-scope", EvidenceFingerprint = fingerprint,
@@ -2324,21 +2276,23 @@ internal static class AiHubUxSmoke
             };
             SetPrivate(vm, "_retainingAiReport", true);
             Invoke(vm, "ApplyAiAnalysis", final with { Issues = new[] { lowered } }, rules, events, snapshot, false);
-            Require(vm.AllIssues.Count == 1 && vm.AllIssues[0].Severity == "Low" && snapshot.Findings.Single().Severity == "Low" &&
-                snapshot.Timestamp == timestamp && snapshot.AiAnalysisScope == "current-synthetic-scope" && vm.HighCount == 0,
-                "Complete AI review lowers the current scan's rule severity and replaces its model-scope metadata without creating a new scan.");
+            Require(vm.AllIssues.Count == 1 && vm.AllIssues[0].IsHigh && snapshot.Findings.Single().IsHigh &&
+                snapshot.Findings[0].ObservedEventLevel == 1 && snapshot.Findings[0].Title == lowered.Title &&
+                snapshot.Timestamp == timestamp && snapshot.AiAnalysisScope == "current-synthetic-scope" && vm.HighCount == 1 && vm.HealthScore == 85,
+                "Complete AI review retains the observed Critical event's High floor while accepting its analysis and replacing model-scope metadata without creating a new scan.");
 
             SetPrivate(vm, "_retainingAiReport", true);
             Invoke(vm, "ApplyAiAnalysis", final, rules, events, snapshot, false);
-            Require(vm.AllIssues.Count == 0 && snapshot.Findings.Count == 0 && snapshot.Timestamp == timestamp &&
-                vm.HealthScore == 100 && snapshot.HealthScore == 100 && vm.HighCount == 0 && vm.MediumCount == 0 && vm.LowCount == 0 &&
+            Require(vm.AllIssues.Count == 1 && snapshot.Findings.Count == 1 && snapshot.Timestamp == timestamp &&
+                snapshot.Findings[0].IsHigh && snapshot.Findings[0].ObservedEventLevel == 1 && snapshot.Findings[0].Occurrences == 1 &&
+                vm.HealthScore == 85 && snapshot.HealthScore == 85 && vm.HighCount == 1 && vm.MediumCount == 0 && vm.LowCount == 0 &&
                 vm.AiReportFindings.Count == 0 && snapshot.AnalysisOutcome == "ok" && vm.HasAiReport && !Field<bool>(vm, "_retainingAiReport"),
-                "Complete empty AI assessment removes old current-scan findings and updates health, category counts, AI report and snapshot together.");
+                "Complete empty AI assessment preserves an omitted Critical event as High and updates health, category counts, AI report and snapshot together.");
             string acceptedSummary = vm.AiReportSummaryText;
             SetPrivate(vm, "_retainingAiReport", true);
             Invoke(vm, "ApplyAiAnalysis", final with { CompleteEvidenceCoverage = false, IsPartial = true }, rules, events, snapshot, false);
-            Require(vm.AllIssues.Count == 0 && snapshot.Findings.Count == 0 && vm.AiReportSummaryText == acceptedSummary,
-                "A later partial retry cannot resurrect rules dismissed by the last complete assessment.");
+            Require(vm.AllIssues.Count == 1 && snapshot.Findings.Count == 1 && snapshot.Findings[0].IsHigh && vm.AiReportSummaryText == acceptedSummary,
+                "A later partial retry must preserve the last complete assessment and its observed High-risk finding.");
             var fallback = final with
             {
                 UsedModel = "gpt-6-luna", UsedRoute = "Fallback", MatchesRequestedModel = false,
@@ -2352,7 +2306,7 @@ internal static class AiHubUxSmoke
             Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "Restoring fallback history cannot relabel it as a current primary-model report.");
             Invoke(vm, "ApplyAiAnalysis", final, rules, events, snapshot, false);
             Invoke(vm, "RefreshAuditReportIdentity", "another-synthetic-scope");
-            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A new model/policy scope still exposes updating after an empty successful report.");
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A new model/policy scope still exposes updating after a complete assessment with a retained High-risk finding.");
             Invoke(vm, "RefreshAuditReportIdentity", "current-synthetic-scope");
             Require(!Field<bool>(vm, "_auditReportNeedsRefresh"), "The report returns to view mode for its accepted scope.");
             snapshot.AiAnalysisScope = string.Empty;
@@ -2360,6 +2314,42 @@ internal static class AiHubUxSmoke
             Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A legacy report without model scope must request an update after readiness refresh.");
             snapshot.AiAnalysisScope = "current-synthetic-scope";
             Invoke(vm, "RefreshAuditReportIdentity", "current-synthetic-scope");
+
+            SecurityEvent[] warningEvents = { new(4242, "System", "Synthetic-Warning", 3, timestamp.AddMinutes(-4), "Synthetic reviewed warning") };
+            var warningRules = AuditRuleEngine.Analyze(warningEvents);
+            Require(warningRules.Single().IsMedium, "The separate Warning fixture must begin at Medium risk before AI review.");
+            var warningSnapshot = new AuditResult
+            {
+                Timestamp = timestamp, ScanStart = timestamp.AddDays(-2), ScanEnd = timestamp, EventsScanned = 1,
+                Findings = warningRules, HealthScore = HealthScoreCalculator.Calculate(warningRules),
+            };
+            var warningFinal = final with
+            {
+                EvidenceFingerprint = (string)typeof(AiHubAuditAnalysisService).GetMethod("CreateEvidenceFingerprint", BindingFlags.Static | BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { warningEvents, null }),
+            };
+            var reviewedWarning = new AuditIssue
+            {
+                Key = "reviewed-warning", EventRef = "item-000001", RelatedEventRefs = new() { "item-000001" },
+                Title = "Reviewed warning", TitleZh = "已复核警告", Severity = "Low", Recommendation = "Monitor recurrence",
+            };
+            Invoke(vm, "ApplyHistoricalAudit", warningSnapshot);
+            SetPrivate(vm, "_persistCurrentAudit", false);
+            Invoke(vm, "ApplyAiAnalysis", warningFinal with { Issues = new[] { reviewedWarning } }, warningRules, warningEvents, warningSnapshot, false);
+            Require(vm.AllIssues.Count == 1 && vm.AllIssues[0].IsLow && warningSnapshot.Findings.Single().IsLow &&
+                warningSnapshot.Findings[0].ObservedEventLevel == 3 && vm.HighCount == 0 && vm.MediumCount == 0 && vm.LowCount == 1,
+                "Complete AI review may lower a Warning event to Low because it has no observed Critical/Error evidence.");
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", warningFinal, warningRules, warningEvents, warningSnapshot, false);
+            Require(vm.AllIssues.Count == 0 && warningSnapshot.Findings.Count == 0 && vm.HealthScore == 100 && warningSnapshot.HealthScore == 100 &&
+                vm.HighCount == 0 && vm.MediumCount == 0 && vm.LowCount == 0 && vm.AiReportFindings.Count == 0 && warningSnapshot.AnalysisOutcome == "ok" && vm.HasAiReport,
+                "Complete empty AI assessment may dismiss reviewed Warning evidence and update the empty findings, health, category counts and report together.");
+            string acceptedWarningSummary = vm.AiReportSummaryText;
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", warningFinal with { CompleteEvidenceCoverage = false, IsPartial = true }, warningRules, warningEvents, warningSnapshot, false);
+            Require(vm.AllIssues.Count == 0 && warningSnapshot.Findings.Count == 0 && vm.AiReportSummaryText == acceptedWarningSummary,
+                "A later partial retry cannot resurrect Warning rules dismissed by the last complete assessment.");
+            Invoke(vm, "ApplyHistoricalAudit", snapshot);
             await NextRendering();
             await Capture(page, "aihub-ai-final-assessment.png");
             Require(!Field<bool>(vm, "_persistCurrentAudit") && !vm.AiHub.IsEnabled,
@@ -2373,7 +2363,7 @@ internal static class AiHubUxSmoke
             if (original != null) Invoke(vm, "ApplyHistoricalAudit", original);
             else Invoke(vm, "ClearAuditSnapshot");
         }
-        Log("AI final assessment downgrade, empty replacement, partial preservation and scope identity PASS");
+        Log("AI final assessment Critical High floor and omission preservation, Warning downgrade and dismissal, partial preservation and scope identity PASS");
 
         static void SetPrivate(AIHubPageViewModel model, string field, object value) =>
             typeof(AIHubPageViewModel).GetField(field, PrivateInstance).SetValue(model, value);
@@ -2470,6 +2460,93 @@ internal static class AiHubUxSmoke
             Invoke(vm, "ApplyHistoricalAudit", fixture);
         }
         Log("AI summary partial/no-report neutrality, zero/one recommendation isolation, report-evidence filtering and evidence projection PASS");
+    }
+
+    private static async Task CheckScanButtonNavigation(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var root = (FrameworkElement)App.GetSettingsWindow().Content;
+        var previousTheme = root.RequestedTheme;
+        int previousMode = vm.SelectedScanModeIndex;
+        int previousTab = vm.ActiveTabIndex;
+        var scan = (SplitButton)page.FindName("AuditScanButton");
+        var analyzing = typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAiAnalyzing));
+        Require(!vm.IsAuditing && !vm.IsAiAnalyzing, "Navigation palette checks require an idle synthetic audit.");
+        try
+        {
+            vm.SelectedScanModeIndex = 1;
+            vm.ActiveTabIndex = 0;
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                root.RequestedTheme = theme;
+                await CheckScanButtonBoundState(page, $"navigation-{theme}-initial");
+                string readyPalette = ReadPalette(requireAccent: true);
+                foreach (Type destination in new[] { typeof(GeneralPage), typeof(DashboardPage), typeof(NetMapPage) })
+                {
+                    await LeaveAndReturn(destination);
+                    await CheckScanButtonBoundState(page, $"navigation-{theme}-from-{destination.Name}");
+                    Require(ReadPalette(requireAccent: true) == readyPalette,
+                        $"{theme}: returning from {destination.Name} must preserve both Full scan accent surfaces and foregrounds.");
+                }
+
+                analyzing.SetValue(vm, true);
+                await CheckScanButtonBoundState(page, $"navigation-{theme}-running");
+                string runningPalette = ReadPalette(requireAccent: false);
+                await LeaveAndReturn(typeof(DashboardPage));
+                await CheckScanButtonBoundState(page, $"navigation-{theme}-running-return");
+                Require(vm.IsAiAnalyzing && !scan.IsEnabled && ReadPalette(requireAccent: false) == runningPalette,
+                    $"{theme}: a running audit must stay disabled and preserve its distinct disabled palette after navigation.");
+
+                // Completion can happen while the cached page is unloaded. Exercise
+                // that real lifecycle without forcing template visual states here.
+                await Navigate(typeof(GeneralPage));
+                analyzing.SetValue(vm, false);
+                await Navigate(typeof(AIHubPage));
+                Require(ReferenceEquals(page, NavigationService.Frame.Content), "AI Hub must reuse its cached page instance.");
+                await CheckScanButtonBoundState(page, $"navigation-{theme}-completed-away");
+                Require(scan.IsEnabled && ReadPalette(requireAccent: true) == readyPalette,
+                    $"{theme}: completing while away must restore Full scan's enabled accent appearance on return.");
+            }
+        }
+        finally
+        {
+            analyzing.SetValue(vm, false);
+            if (!ReferenceEquals(page, NavigationService.Frame.Content)) await Navigate(typeof(AIHubPage));
+            vm.SelectedScanModeIndex = previousMode;
+            vm.ActiveTabIndex = previousTab;
+            root.RequestedTheme = previousTheme;
+            await NextRendering();
+        }
+        Log("Full scan cached navigation from General/Home/NetMap, running reentry, completion while hidden and Light/Dark enabled accent restoration PASS");
+
+        async Task LeaveAndReturn(Type destination)
+        {
+            await Navigate(destination);
+            await Navigate(typeof(AIHubPage));
+            Require(ReferenceEquals(page, NavigationService.Frame.Content), "Navigation regression must exercise the same cached AI Hub page.");
+        }
+
+        string ReadPalette(bool requireAccent)
+        {
+            var primary = Descendants(scan).OfType<Button>().Single(button => button.Name == "PrimaryButton");
+            var secondary = Descendants(scan).OfType<Button>().Single(button => button.Name == "SecondaryButton");
+            var backdrop = scan.ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(255, 32, 32, 32) : Windows.UI.Color.FromArgb(255, 243, 243, 243);
+            var primaryFill = CompositeBrush(Descendants(primary).OfType<Grid>().Single(grid => grid.Name == "RootGrid").Background,
+                CompositeBrush(Descendants(scan).OfType<Grid>().Single(grid => grid.Name == "PrimaryBackgroundGrid").Background, backdrop));
+            var secondaryFill = CompositeBrush(Descendants(secondary).OfType<Grid>().Single(grid => grid.Name == "RootGrid").Background,
+                CompositeBrush(Descendants(scan).OfType<Grid>().Single(grid => grid.Name == "SecondaryBackgroundGrid").Background, backdrop));
+            var label = Descendants(primary).OfType<TextBlock>().Single(block => block.Text == vm.SelectedScanLabel);
+            var arrow = Descendants(secondary).OfType<AnimatedIcon>().Single();
+            if (requireAccent)
+            {
+                Require(HasChroma(primaryFill) && HasChroma(secondaryFill),
+                    $"Enabled Full scan must draw an accent background on both actual inner surfaces, not neutral gray: {primaryFill}/{secondaryFill}.");
+            }
+            return $"{primaryFill}/{secondaryFill}/{BrushColor(label.Foreground)}/{BrushColor(arrow.Foreground)}";
+        }
+
+        static bool HasChroma(Windows.UI.Color color) => Math.Max(color.R, Math.Max(color.G, color.B)) - Math.Min(color.R, Math.Min(color.G, color.B)) >= 20;
     }
 
     private static async Task CheckScanButtonBoundState(AIHubPage page, string context)
@@ -3072,6 +3149,43 @@ internal static class AiHubUxSmoke
         var png = new byte[encoded.Size];
         using (var reader = new Windows.Storage.Streams.DataReader(encoded.GetInputStreamAt(0))) { await reader.LoadAsync((uint)encoded.Size); reader.ReadBytes(png); }
         File.WriteAllBytes(Path.Combine(Output, name), png);
+    }
+
+    internal static async Task CaptureElement(FrameworkElement element, string name, Windows.UI.Color representativeBackdrop)
+    {
+        // RenderTargetBitmap captures XAML content, not the separate native Mica
+        // compositor backdrop. The real Window.SystemBackdrop is checked above.
+        var bitmap = new RenderTargetBitmap();
+        await bitmap.RenderAsync(element);
+        var pixels = await bitmap.GetPixelsAsync();
+        var bytes = new byte[pixels.Length];
+        using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels)) reader.ReadBytes(bytes);
+        await WritePng(bytes, name);
+        // RenderTargetBitmap supplies premultiplied BGRA. Preserve the raw alpha
+        // capture, then create a separately named opaque preview for viewers
+        // that incorrectly show translucent white cards against white.
+        var composited = (byte[])bytes.Clone();
+        for (int offset = 0; offset < composited.Length; offset += 4)
+        {
+            double remaining = 1 - composited[offset + 3] / 255.0;
+            composited[offset] = (byte)Math.Min(255, Math.Round(composited[offset] + representativeBackdrop.B * remaining));
+            composited[offset + 1] = (byte)Math.Min(255, Math.Round(composited[offset + 1] + representativeBackdrop.G * remaining));
+            composited[offset + 2] = (byte)Math.Min(255, Math.Round(composited[offset + 2] + representativeBackdrop.R * remaining));
+            composited[offset + 3] = 255;
+        }
+        await WritePng(composited, Path.GetFileNameWithoutExtension(name) + "-composited.png");
+        Log($"REPORT CAPTURE {name}: raw alpha XAML; -composited.png uses representativeBase={representativeBackdrop}, not native Mica pixels");
+
+        async Task WritePng(byte[] content, string fileName)
+        {
+            using var encoded = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, encoded);
+            encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, content);
+            await encoder.FlushAsync();
+            var png = new byte[encoded.Size];
+            using (var reader = new Windows.Storage.Streams.DataReader(encoded.GetInputStreamAt(0))) { await reader.LoadAsync((uint)encoded.Size); reader.ReadBytes(png); }
+            File.WriteAllBytes(Path.Combine(Output, fileName), png);
+        }
     }
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {

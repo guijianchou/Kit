@@ -3,12 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.WingetLib;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace Kit.Settings.UI.Views;
 
@@ -45,18 +46,55 @@ public sealed class WingetConfirmationItem
     public Visibility AgreementsVisibility => string.IsNullOrEmpty(AgreementsSummary) ? Visibility.Collapsed : Visibility.Visible;
 }
 
-public sealed partial class WingetConfirmationDialog : ContentDialog
+public sealed partial class WingetConfirmationDialog : ContentDialog, ILiveLocalizable
 {
-    public WingetConfirmationDialog(WingetPreparedOperation prepared, string optionsSummary)
+    private readonly WingetPreparedOperation prepared;
+    private readonly string optionsSummary;
+    private readonly Func<string> optionsSummaryProvider;
+    private string displayedLanguage;
+
+    public WingetConfirmationDialog(WingetPreparedOperation prepared, string optionsSummary, Func<string> optionsSummaryProvider = null)
     {
         ArgumentNullException.ThrowIfNull(prepared);
+        this.prepared = prepared;
+        this.optionsSummary = optionsSummary ?? string.Empty;
+        this.optionsSummaryProvider = optionsSummaryProvider;
         InitializeComponent();
+        AppearanceService.RegisterRoot(this);
+        RefreshLocalization();
+    }
+
+    public void RefreshLocalization()
+    {
         Title = WingetViewModel.L(prepared.Kind == "uninstall" ? "BatchUninstallTitle" : prepared.Kind == "upgrade" ? "BatchUpgradeTitle" : "BatchInstallTitle");
         PrimaryButtonText = WingetViewModel.L(prepared.Packages.Any(item => item.Agreements.Count > 0) ? "AcceptContinue" : "Continue");
         CloseButtonText = WingetViewModel.L("CancelText");
         ExplanationText.Text = WingetViewModel.L(prepared.Kind == "uninstall" ? "BatchUninstallExplanation" : "BatchInstallExplanation");
         ElevationText.Text = WingetViewModel.L("ElevationConfirmation");
-        OptionsSummaryText.Text = optionsSummary ?? string.Empty;
-        PackagesRepeater.ItemsSource = prepared.Packages.Select(details => new WingetConfirmationItem(details, prepared.Kind)).ToList();
+        OptionsSummaryText.Text = optionsSummaryProvider?.Invoke() ?? optionsSummary;
+        if (displayedLanguage != RuntimeLocalization.EffectiveLanguage)
+        {
+            displayedLanguage = RuntimeLocalization.EffectiveLanguage;
+            PackagesRepeater.ItemsSource = prepared.Packages.Select(details => new WingetConfirmationItem(details, prepared.Kind)).ToList();
+        }
+    }
+
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+
+        // BackgroundElement owns the rounded acrylic. Avoid a second, square
+        // material layer in the footer, which otherwise breaks its continuity.
+        if (GetTemplateChild("CommandSpace") is Grid commandSpace)
+        {
+            commandSpace.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        }
+
+        // On short windows or larger text sizes, keep the title and full agreement
+        // reachable without letting them push the fixed confirmation buttons away.
+        if (GetTemplateChild("ContentScrollViewer") is ScrollViewer contentScroll)
+        {
+            contentScroll.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        }
     }
 }

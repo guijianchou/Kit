@@ -167,7 +167,7 @@ public sealed partial class AIHubPageViewModel
         RebuildSections();
 
         _aiReportFindings.Clear();
-        foreach (var issue in issues.OrderByDescending(item => item.Severity == "High").ThenByDescending(item => item.Occurrences))
+        foreach (var issue in AuditRiskPolicy.OrderFindings(merged.Where(IsPersistedAiFinding)))
         {
             _aiReportFindings.Add(new AiReportFinding(
                 PreferChinese() && !string.IsNullOrWhiteSpace(issue.TitleZh) ? issue.TitleZh : issue.Title,
@@ -259,8 +259,7 @@ public sealed partial class AIHubPageViewModel
     {
         int high = findings.Count(finding => finding.IsHigh);
         int medium = findings.Count(finding => finding.IsMedium);
-        var priorities = findings.OrderByDescending(finding => finding.IsHigh).ThenByDescending(finding => finding.IsMedium)
-            .ThenByDescending(finding => finding.Occurrences).Take(3).ToList();
+        var priorities = AuditRiskPolicy.OrderFindings(findings).Take(3).ToList();
         string headline = chinese
             ? $"本次共检查 {collected} 条事件，AI 审阅其中 {reviewed} 条。综合本地规则与 AI 发现，记录 {findings.Count} 项问题，其中高优先级 {high} 项、中优先级 {medium} 项。"
             : $"This audit checked {collected} events; AI reviewed {reviewed}. Local rules and AI identified {findings.Count} issues, including {high} high-priority and {medium} medium-priority issues.";
@@ -294,12 +293,7 @@ public sealed partial class AIHubPageViewModel
             return;
         }
 
-        var aiFindings = (history.Findings ?? [])
-            .Where(IsPersistedAiFinding)
-            .OrderByDescending(item => item.IsHigh)
-            .ThenByDescending(item => item.IsMedium)
-            .ThenByDescending(item => item.Occurrences)
-            .ToList();
+        var aiFindings = AuditRiskPolicy.OrderFindings((history.Findings ?? []).Where(IsPersistedAiFinding)).ToList();
 
         _aiReportFindings.Clear();
         foreach (var issue in aiFindings)
@@ -410,6 +404,10 @@ public sealed partial class AIHubPageViewModel
             AiReusedEvents = snapshot.AiReusedEvents,
         };
         _auditHistoryWriteTask = SaveAuditAfterAsync(_auditHistoryWriteTask, saved);
+        lock (_lastAuditEvents)
+        {
+            CaptureWeeklyScanSnapshot(saved, _lastAuditEvents);
+        }
     }
 
     private async Task SaveAuditAfterAsync(Task previous, AuditResult snapshot)

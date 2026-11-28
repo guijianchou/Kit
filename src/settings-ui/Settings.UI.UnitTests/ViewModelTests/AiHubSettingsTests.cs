@@ -46,11 +46,14 @@ namespace ViewModelTests
             vm.TaskPolicyIndex = 1;
             Assert.AreEqual(2, vm.ActivePolicyIndex);
             Assert.IsTrue(vm.IsOptimizationPolicyTab);
-            vm.ActivePolicyIndex = -1;
-            vm.ActivePolicyIndex = 3;
             vm.TaskPolicyIndex = 2;
+            Assert.AreEqual(3, vm.ActivePolicyIndex);
+            Assert.IsTrue(vm.IsWeeklyReportPolicyTab);
+            StringAssert.EndsWith(vm.CurrentPolicyFilePath, Path.Combine("windows-stability-report", "AGENTS.md"));
+            vm.ActivePolicyIndex = -1;
+            vm.ActivePolicyIndex = 4;
             vm.TaskPolicyIndex = 3;
-            Assert.AreEqual(2, vm.ActivePolicyIndex, "Removed or invalid selections must not address a different policy.");
+            Assert.AreEqual(3, vm.ActivePolicyIndex, "Invalid selections must not address a different policy.");
         }
 
         [TestMethod]
@@ -62,6 +65,7 @@ namespace ViewModelTests
             vm.SecurityPolicyContent = "test global policy";
             vm.SecurityAuditPolicyContent = "test security policy";
             vm.OptimizationPolicyContent = "test opt policy";
+            vm.WeeklyReportPolicyContent = "test weekly policy";
 
             vm.ActivePolicyIndex = 0;
             Assert.AreEqual("test global policy", vm.CurrentPolicyContent);
@@ -74,6 +78,13 @@ namespace ViewModelTests
 
             vm.CurrentPolicyContent = "updated opt policy";
             Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
+
+            vm.TaskPolicyIndex = 2;
+            Assert.AreEqual("test weekly policy", vm.CurrentPolicyContent);
+            vm.CurrentPolicyContent = "updated weekly policy";
+            Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
+            Assert.AreEqual("test security policy", vm.SecurityAuditPolicyContent);
+            vm.TaskPolicyIndex = 1;
 
             Assert.IsTrue(vm.IsCurrentPolicyDirty);
             Assert.IsTrue(vm.HasUnsavedPolicyChanges);
@@ -88,6 +99,7 @@ namespace ViewModelTests
         [TestMethod]
         [DataRow(0)]
         [DataRow(1)]
+        [DataRow(2)]
         public async Task GlobalPolicyDiscardPreservesSelectedTaskDraft(int taskPolicyIndex)
         {
             using var vm = new AiHubViewModel();

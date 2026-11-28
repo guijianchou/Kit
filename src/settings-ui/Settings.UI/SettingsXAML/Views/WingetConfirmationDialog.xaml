@@ -8,15 +8,48 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:views="using:Kit.Settings.UI.Views"
+    CornerRadius="{ThemeResource OverlayCornerRadius}"
+    FontFamily="{ThemeResource KitUiFontFamily}"
+    FontSize="{ThemeResource KitFontSize14}" services:TypographyResources.BaseFontSize="14"
+    AutomationProperties.AutomationId="Winget_ConfirmationDialog"
     DefaultButton="Close">
 
+    <ContentDialog.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <AcrylicBrush x:Key="WingetConfirmationSurfaceBrush" TintColor="#202A38" TintOpacity="0.14"
+                        TintLuminosityOpacity="0.62" FallbackColor="#FF202733" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <AcrylicBrush x:Key="WingetConfirmationSurfaceBrush" TintColor="#F9FAFD" TintOpacity="0.08"
+                        TintLuminosityOpacity="0.72" FallbackColor="#FFF3F5F9" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="WingetConfirmationSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <!-- One continuous in-app acrylic surface; the native content overlay would obscure it. -->
+            <SolidColorBrush x:Key="ContentDialogTopOverlay" Color="Transparent" />
+        </ResourceDictionary>
+    </ContentDialog.Resources>
+
+    <ContentDialog.Style>
+        <Style TargetType="ContentDialog" BasedOn="{StaticResource DefaultContentDialogStyle}">
+            <Setter Property="Background" Value="{ThemeResource WingetConfirmationSurfaceBrush}" />
+        </Style>
+    </ContentDialog.Style>
+
     <ScrollViewer
+        x:Name="ConfirmationScroll"
         MaxHeight="500"
         MaxWidth="640"
+        Background="Transparent"
         HorizontalScrollMode="Disabled"
         HorizontalScrollBarVisibility="Disabled"
         HorizontalContentAlignment="Stretch"
-        VerticalScrollBarVisibility="Auto">
+        VerticalScrollBarVisibility="Auto"
+        AutomationProperties.AutomationId="Winget_ConfirmationScroll">
         <StackPanel Spacing="12">
             <TextBlock x:Name="ExplanationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
             <Border

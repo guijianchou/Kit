@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Kit.AIHubLib.Services;
 
 namespace Kit.AIHubLib.Models;
 
@@ -38,9 +39,9 @@ public sealed record AuditSummary(int Findings, long Occurrences, int High, int 
         var categories = issues.GroupBy(issue => issue.Category ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .Select(group => new AuditCategorySummary(group.Key, group.Count(), group.Sum(issue => (long)Math.Max(1, issue.Occurrences)),
                 group.Count(issue => issue.IsHigh), group.Count(issue => issue.IsMedium), group.Count(issue => issue.IsLow),
-                group.OrderByDescending(issue => issue.IsHigh).ThenByDescending(issue => issue.IsMedium)
-                    .ThenByDescending(issue => issue.Occurrences).ThenBy(issue => issue.Key, StringComparer.Ordinal).First()))
-            .OrderByDescending(group => group.High).ThenByDescending(group => group.Medium)
+                AuditRiskPolicy.OrderFindings(group).ThenBy(issue => issue.Key, StringComparer.Ordinal).First()))
+            .OrderByDescending(group => group.Priority.ObservedEventLevel == 1)
+            .ThenByDescending(group => group.High).ThenByDescending(group => group.Medium)
             .ThenByDescending(group => group.Occurrences).ThenBy(group => group.Category, StringComparer.OrdinalIgnoreCase).ToArray();
         return new(issues.Length, categories.Sum(group => group.Occurrences), issues.Count(issue => issue.IsHigh),
             issues.Count(issue => issue.IsMedium), issues.Count(issue => issue.IsLow), categories);

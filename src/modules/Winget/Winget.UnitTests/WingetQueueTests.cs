@@ -494,7 +494,7 @@ public sealed class WingetQueueTests
             if (index == 0)
             {
                 firstProgress = progress;
-                progress!.Report(new("WaitingForInstaller", null) { Output = "first in progress" });
+                progress!.Report(new("Downloading", 75, 3072, 4096) { Output = "first in progress" });
                 return new(true, false, false, null, null) { Output = firstOutput };
             }
 
@@ -513,18 +513,29 @@ public sealed class WingetQueueTests
             client.ActionRelease.TrySetResult();
             await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(3));
             Assert.IsNull(runtime.GetStatus().Output, "Each new queue item starts with a fresh output buffer.");
+            Assert.IsNull(runtime.GetStatus().ProgressPercent);
+            Assert.IsNull(runtime.GetStatus().BytesDownloaded, "The previous package's transfer quantities cannot leak to the next package.");
+            Assert.IsNull(runtime.GetStatus().BytesRequired);
             Assert.AreEqual(firstOutput[^16384..], runtime.GetStatus().Queue[0].Result!.Output);
-            firstProgress!.Report(new("WaitingForInstaller", null) { Output = "delayed first-item output" });
+            firstProgress!.Report(new("Downloading", 100, 4096, 4096) { Output = "delayed first-item output" });
             Assert.IsNull(runtime.GetStatus().Output, "A completed queue item's delayed progress cannot overwrite the next item's output.");
-            secondProgress!.Report(new("WaitingForInstaller", null) { Output = new string('p', 20000) });
+            Assert.IsNull(runtime.GetStatus().BytesDownloaded);
+            secondProgress!.Report(new("Downloading", 25, 2048, 8192) { Output = new string('p', 20000) });
             Assert.AreEqual(new string('p', 16384), runtime.GetStatus().Output);
+            Assert.AreEqual(2048UL, runtime.GetStatus().BytesDownloaded);
+            Assert.AreEqual(8192UL, runtime.GetStatus().BytesRequired);
             await Send(runtime, "cancel-queue", new() { OperationId = ack.OperationId });
-            secondProgress.Report(new("WaitingForInstaller", null) { Output = "current native operation still running" });
+            secondProgress.Report(new("Installing", 90) { Output = "current native operation still running" });
             Assert.AreEqual("Cancelling", runtime.GetStatus().Phase);
+            Assert.AreEqual(25.0, runtime.GetStatus().ProgressPercent);
+            Assert.AreEqual(2048UL, runtime.GetStatus().BytesDownloaded);
             Assert.AreEqual("current native operation still running", runtime.GetStatus().Output);
             releaseSecond.TrySetResult();
             await Idle(runtime);
             var status = runtime.GetStatus();
+            Assert.IsNull(status.ProgressPercent);
+            Assert.IsNull(status.BytesDownloaded);
+            Assert.IsNull(status.BytesRequired);
             Assert.AreEqual(secondOutput[^16384..], status.Output);
             Assert.AreEqual(status.Output, status.LastResult!.Install!.Output);
             var saved = new WingetStateStore(_directory).Load();

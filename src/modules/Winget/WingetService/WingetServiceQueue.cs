@@ -264,6 +264,7 @@ internal sealed partial class WingetServiceRuntime
             _status = _status with
             {
                 IsBusy = true, OperationId = operationId, OperationKind = "queue", Phase = "Queued", ProgressPercent = null,
+                BytesDownloaded = null, BytesRequired = null,
                 PreparedOperation = null, LastResult = null, Message = null, Output = null,
             };
 
@@ -410,7 +411,11 @@ internal sealed partial class WingetServiceRuntime
                         PendingInstall = new(item.Package.Id, item.Package.Source, item.Package.AvailableVersion, _utcNow()),
                         RetryAfterUtc = null,
                     };
-                    _status = _status with { Phase = item.Kind == "uninstall" ? "Uninstalling" : "Installing", ProgressPercent = null, Message = item.Package.Name, Output = null };
+                    _status = _status with
+                    {
+                        Phase = item.Kind == "uninstall" ? "Uninstalling" : "Starting", ProgressPercent = null,
+                        BytesDownloaded = null, BytesRequired = null, Message = item.Package.Name, Output = null,
+                    };
                 }
 
                 WingetInstallResult result;
@@ -521,6 +526,9 @@ internal sealed partial class WingetServiceRuntime
                 _status = _status with
                 {
                     Phase = _state.PendingInstall is not null ? "VerificationPending" : succeeded ? "Completed" : _cancelRemaining ? "Cancelled" : "Failed",
+                    ProgressPercent = null,
+                    BytesDownloaded = null,
+                    BytesRequired = null,
                     Packages = _state.PendingInstall is null ? _status.Packages : [],
                     SearchResults = _state.PendingInstall is null ? _status.SearchResults : [],
                     InstalledPackages = _state.PendingInstall is null ? _status.InstalledPackages : [],
@@ -550,7 +558,7 @@ internal sealed partial class WingetServiceRuntime
         {
             lock (_gate)
             {
-                _status = _status with { Phase = "VerifyingInstall" };
+                _status = _status with { Phase = "VerifyingInstall", ProgressPercent = null, BytesDownloaded = null, BytesRequired = null };
             }
 
             var updates = await _client.CheckUpdatesAsync(token).ConfigureAwait(false);

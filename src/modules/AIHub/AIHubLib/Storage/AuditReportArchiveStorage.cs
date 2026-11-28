@@ -10,13 +10,15 @@ namespace Kit.AIHubLib.Storage;
 // All callers hold AuditHistoryStorage's process/thread lock.
 internal static class AuditReportArchiveStorage
 {
-    // 93 retained report cutoffs plus both calendar months needed by the earliest cutoff.
+    internal const int HistoryRetentionDays = 30;
+    // Accept older bounded archives so their expired scans can be removed in place.
     internal const int MaxDays = 155;
     internal const int MaxScansPerDay = 512;
     internal const int MaxBytes = 32 * 1024 * 1024;
 
-    internal static AuditReportArchive Update(string directory, IReadOnlyList<AuditResult> history)
+    internal static AuditReportArchive Update(string directory, IReadOnlyList<AuditResult> history, DateTime? nowUtc = null)
     {
+        DateTime cutoff = Utc(nowUtc ?? DateTime.UtcNow).AddDays(-HistoryRetentionDays);
         string path = Path.Combine(directory, "daily-summary.json");
         var archive = new AuditReportArchive();
         var legacyCounts = new Dictionary<DateOnly, int>();
@@ -60,7 +62,7 @@ internal static class AuditReportArchiveStorage
         }
 
         var days = archive.Days.ToDictionary(day => day.Date);
-        foreach (var group in history.GroupBy(scan => DateOnly.FromDateTime(scan.Timestamp.ToLocalTime())))
+        foreach (var group in history.Where(scan => Utc(scan.Timestamp) >= cutoff).GroupBy(scan => DateOnly.FromDateTime(Utc(scan.Timestamp).ToLocalTime())))
         {
             if (!days.TryGetValue(group.Key, out var day))
             {
@@ -73,6 +75,7 @@ internal static class AuditReportArchiveStorage
         // this floor after merging surviving scans so migration does not count them twice.
         foreach (var entry in legacyCounts) days[entry.Key].Audits = Math.Max(days[entry.Key].Audits, entry.Value);
         archive.Days = days.Values.OrderByDescending(day => day.Date).ToList();
+        RemoveExpired(archive, cutoff);
         while (archive.Days.Count > MaxDays) RemoveOldestDay(archive);
 
         byte[] bytes = Serialize(archive);
@@ -133,8 +136,32 @@ internal static class AuditReportArchiveStorage
         return archive;
     }
 
-    internal static AuditPeriodReport Report(AuditReportArchive archive, DateOnly endDate, TimeZoneInfo zone, bool monthly)
+    private static void RemoveExpired(AuditReportArchive archive, DateTime cutoff)
     {
+        DateOnly cutoffDate = DateOnly.FromDateTime(cutoff.ToLocalTime());
+        if (archive.PrunedThrough is null || archive.PrunedThrough.Value < cutoffDate) archive.PrunedThrough = cutoffDate;
+        foreach (var day in archive.Days.ToArray())
+        {
+            int removed = day.Scans.RemoveAll(scan => Utc(scan.Timestamp) < cutoff);
+            if (day.Scans.Count == 0)
+            {
+                archive.Days.Remove(day);
+                continue;
+            }
+            if (removed > 0)
+            {
+                day.Audits = Math.Max(day.Scans.Count, day.Audits - removed);
+                day.EvidenceIncomplete = true;
+                Compact(day);
+            }
+        }
+    }
+
+    private static DateTime Utc(DateTime value) => value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+    internal static AuditPeriodReport Report(AuditReportArchive archive, DateOnly endDate, TimeZoneInfo zone, bool monthly, DateTime? nowUtc = null)
+    {
+        DateOnly retentionDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(Utc(nowUtc ?? DateTime.UtcNow).AddDays(-HistoryRetentionDays), zone));
         var report = AuditPeriodReport.From(archive.Days.SelectMany(day => day.RestoreScans()).ToArray(), endDate, zone, monthly,
             archive.Days.ToDictionary(day => day.Date, day => day.Audits));
         bool Relevant(DateOnly date) => (date >= report.StartDate && date <= report.EndDate)
@@ -143,6 +170,10 @@ internal static class AuditReportArchiveStorage
         {
             HistoryIncomplete = (archive.PrunedThrough is { } cutoff && report.PreviousStartDate <= cutoff)
                 || archive.Days.Any(day => Relevant(day.Date) && day.EvidenceIncomplete),
+            CurrentHistoryIncomplete = (archive.PrunedThrough is { } currentCutoff && report.StartDate <= currentCutoff)
+                || archive.Days.Any(day => day.Date >= report.StartDate && day.Date <= report.EndDate && day.EvidenceIncomplete),
+            CurrentRetainedHistoryIncomplete = (archive.PrunedThrough is { } retainedCutoff && retainedCutoff > retentionDate && report.StartDate <= retainedCutoff)
+                || archive.Days.Any(day => day.Date > retentionDate && day.Date >= report.StartDate && day.Date <= report.EndDate && day.EvidenceIncomplete),
         };
     }
 

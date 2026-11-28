@@ -17,6 +17,7 @@ using Kit.AiHub.Serialization;
 public sealed class AiUsageStore
 {
     public const string DatabaseFileName = "ai-usage.db";
+    public const int HistoryRetentionDays = 30;
     private const string CurrentSchemaVersion = "2";
     private const int MaximumModelLength = 128;
     private const int MaximumIdentifierLength = 64;
@@ -99,7 +100,7 @@ public sealed class AiUsageStore
     ];
 
     private static readonly string[] KnownPlugins = ["aihub", "netmap", "udptest", "winget", "awake", "lightswitch", "localserver"];
-    private static readonly string[] KnownTasks = ["self-test", "security-audit", "system-optimization", "route-analysis"];
+    private static readonly string[] KnownTasks = ["self-test", "security-audit", "system-optimization", "route-analysis", "windows-stability-report"];
     private static readonly string[] KnownReasons =
     [
         "None", "NativeRetryRecovered", "InvalidConfiguration", "UnsupportedNativeConfiguration",
@@ -118,6 +119,8 @@ public sealed class AiUsageStore
     private readonly object _gate = new();
     private readonly string _dataDirectory;
     private readonly string _stateDirectory;
+    private readonly Func<DateTimeOffset> _utcNow;
+    private readonly TimeZoneInfo _localZone;
     private bool _schemaInitialized;
 
     public string DatabasePath { get; }
@@ -129,10 +132,17 @@ public sealed class AiUsageStore
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "AiHub");
 
     public AiUsageStore(string? dataDirectory = null)
+        : this(dataDirectory, () => DateTimeOffset.UtcNow, TimeZoneInfo.Local)
+    {
+    }
+
+    internal AiUsageStore(string? dataDirectory, Func<DateTimeOffset> utcNow, TimeZoneInfo localZone)
     {
         _dataDirectory = AiHubStorageFiles.NormalizeDirectory(dataDirectory ?? DefaultDataDirectory);
         _stateDirectory = Path.Combine(_dataDirectory, "State");
         DatabasePath = Path.Combine(_stateDirectory, DatabaseFileName);
+        _utcNow = utcNow;
+        _localZone = localZone;
     }
 
     /// <summary>Records one Codex task or route event into SQLite. Non-Codex kernels are ignored; never throws into callers.</summary>
@@ -165,11 +175,11 @@ public sealed class AiUsageStore
     }
 
     /// <summary>Loads an aggregated Codex usage overview for the requested time window.</summary>
-    public AiUsageOverview GetOverview(AiUsageTimeRange range = AiUsageTimeRange.AllTime, string? currentSessionId = null, int maxRecentCalls = 40)
+    public AiUsageOverview GetOverview(AiUsageTimeRange range = AiUsageTimeRange.Today, string? currentSessionId = null, int maxRecentCalls = 40)
     {
         string safeSessionId = SanitizeIdentifier(currentSessionId);
         int boundedRecent = Math.Clamp(maxRecentCalls, 1, MaximumRecentCalls);
-        DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
+        DateTimeOffset nowUtc = _utcNow();
 
         try
         {
@@ -350,6 +360,15 @@ public sealed class AiUsageStore
             TryBackfillLegacyDiagnostics(connection);
             _schemaInitialized = true;
         }
+
+        PruneExpired(connection);
+    }
+
+    private void PruneExpired(WinSqlite3.SqliteConnection connection)
+    {
+        using var statement = connection.Prepare("DELETE FROM codex_usage_events WHERE timestamp_unix_ms < ?1;");
+        statement.BindInt64(1, _utcNow().AddDays(-HistoryRetentionDays).ToUnixTimeMilliseconds());
+        statement.ExecuteNonQuery();
     }
 
     private static void EnsureSchemaV2Migration(WinSqlite3.SqliteConnection connection)
@@ -478,10 +497,15 @@ public sealed class AiUsageStore
         }
     }
 
-    private static void InsertRecord(WinSqlite3.SqliteConnection connection, AiDiagnosticRecord record, string sessionId, bool isLegacyImport)
+    private void InsertRecord(WinSqlite3.SqliteConnection connection, AiDiagnosticRecord record, string sessionId, bool isLegacyImport)
     {
         string kind = Known(record.Kind, ["task", "route"], "task");
-        DateTimeOffset timestampUtc = record.TimestampUtc == default ? DateTimeOffset.UtcNow : record.TimestampUtc.ToUniversalTime();
+        DateTimeOffset timestampUtc = record.TimestampUtc == default ? _utcNow() : record.TimestampUtc.ToUniversalTime();
+        if (timestampUtc < _utcNow().AddDays(-HistoryRetentionDays))
+        {
+            return;
+        }
+
         long timestampUnixMs = timestampUtc.ToUnixTimeMilliseconds();
         string pluginId = Known(record.PluginId, KnownPlugins, "other");
         string taskId = Known(record.TaskId, KnownTasks, "other");
@@ -1053,7 +1077,7 @@ public sealed class AiUsageStore
         };
     }
 
-    private static (string Clause, Action<WinSqlite3.SqliteStatement> Bind) BuildFilter(
+    private (string Clause, Action<WinSqlite3.SqliteStatement> Bind) BuildFilter(
         AiUsageTimeRange range,
         string currentSessionId,
         DateTimeOffset nowUtc)
@@ -1065,10 +1089,12 @@ public sealed class AiUsageStore
 
             case AiUsageTimeRange.Today:
             {
-                DateTimeOffset localNow = TimeZoneInfo.ConvertTime(nowUtc, TimeZoneInfo.Local);
-                DateTimeOffset localMidnight = new(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, localNow.Offset);
-                long cutoffMs = localMidnight.ToUniversalTime().ToUnixTimeMilliseconds();
-                return ("AND timestamp_unix_ms >= ?1", stmt => stmt.BindInt64(1, cutoffMs));
+                var (start, end) = LocalDayWindow(nowUtc, _localZone);
+                return ("AND timestamp_unix_ms >= ?1 AND timestamp_unix_ms < ?2", stmt =>
+                {
+                    stmt.BindInt64(1, start.ToUnixTimeMilliseconds());
+                    stmt.BindInt64(2, end.ToUnixTimeMilliseconds());
+                });
             }
 
             case AiUsageTimeRange.Last7Days:
@@ -1085,6 +1111,25 @@ public sealed class AiUsageStore
 
             default:
                 return (string.Empty, static _ => { });
+        }
+    }
+
+    internal static (DateTimeOffset Start, DateTimeOffset End) LocalDayWindow(DateTimeOffset nowUtc, TimeZoneInfo zone)
+    {
+        DateTime date = DateTime.SpecifyKind(TimeZoneInfo.ConvertTime(nowUtc, zone).Date, DateTimeKind.Unspecified);
+        return (StartOfDay(date), StartOfDay(date.AddDays(1)));
+
+        DateTimeOffset StartOfDay(DateTime local)
+        {
+            // Some zones change offsets at midnight. Use the first real instant of
+            // each local date, and resolve an overlap to its earlier occurrence.
+            while (zone.IsInvalidTime(local))
+            {
+                local = local.AddMinutes(1);
+            }
+
+            TimeSpan offset = zone.IsAmbiguousTime(local) ? zone.GetAmbiguousTimeOffsets(local).Max() : zone.GetUtcOffset(local);
+            return new DateTimeOffset(local, offset).ToUniversalTime();
         }
     }
 

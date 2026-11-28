@@ -672,10 +672,10 @@ public static class AiHubAuditAnalysisService
     private static IEnumerable<string> IssueReferences(AuditIssue issue) => issue.RelatedEventRefs.Append(issue.EventRef)
         .Concat(AuditAnalysisCache.GetNarrativeReferences(issue)).Distinct(StringComparer.Ordinal);
 
-    internal static string CreateEvidenceFingerprint(IReadOnlyList<SecurityEvent> events)
+    internal static string CreateEvidenceFingerprint(IReadOnlyList<SecurityEvent> events, string? language = null)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData(Encoding.UTF8.GetBytes(Language));
+        hash.AppendData(Encoding.UTF8.GetBytes(language ?? Language));
         foreach (var item in SelectEvidence(events).Select(ToInput))
         {
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(item, AIHubLibJsonContext.Default.EventAnalysisInput);

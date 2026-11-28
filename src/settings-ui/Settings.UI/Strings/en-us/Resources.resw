@@ -3449,7 +3449,7 @@
     <value>Task instructions</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>Customize instructions for security audits and system optimization. Global safety rules are in AI service settings.</value>
+    <value>Customize independent instructions for security audits, system optimization and weekly reports. Global safety rules are in AI service settings.</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>Checking…</value>
@@ -3665,22 +3665,22 @@
     <value>Audit failed</value>
   </data>
   <data name="AIHub_HealthVerdict_Critical" xml:space="preserve">
-    <value>Attention needed · Critical issues detected</value>
+    <value>Attention needed · High-risk findings detected</value>
   </data>
   <data name="AIHub_HealthSummary_CriticalFormat" xml:space="preserve">
-    <value>{0} high-priority issue(s) and {1} warning(s) detected. Action recommended.</value>
+    <value>Recorded {0} high-risk and {1} medium-risk finding(s). Verify the evidence and prioritize the recommended actions.</value>
   </data>
   <data name="AIHub_HealthVerdict_Good" xml:space="preserve">
-    <value>Good · Most indicators stable</value>
+    <value>Review needed · Medium-risk findings remain</value>
   </data>
   <data name="AIHub_HealthSummary_GoodFormat" xml:space="preserve">
-    <value>No critical failures found. Recorded {0} warning(s) and {1} info event(s).</value>
+    <value>Recorded {0} medium-risk and {1} low-risk finding(s). Review the evidence and verify the impact.</value>
   </data>
   <data name="AIHub_HealthVerdict_Excellent" xml:space="preserve">
-    <value>Excellent · System fully healthy</value>
+    <value>No high- or medium-risk findings in this scan</value>
   </data>
   <data name="AIHub_HealthSummary_Excellent" xml:space="preserve">
-    <value>No security violations or stability anomalies detected in the scanned period.</value>
+    <value>This assessment applies only to the collected evidence. Review any remaining low-risk findings and coverage limits.</value>
   </data>
   <data name="AIHub_ScanType_Historical" xml:space="preserve">
     <value>Historical snapshot</value>
@@ -3941,8 +3941,13 @@
     <value>Loading package details…</value>
   </data>
   <data name="Winget_Phase_Downloading" xml:space="preserve">
-    <value>Downloading and verifying…</value>
+    <value>Downloading…</value>
   </data>
+  <data name="Winget_Phase_Verifying" xml:space="preserve"><value>Verifying the download…</value></data>
+  <data name="Winget_DownloadProgressPending" xml:space="preserve"><value>Waiting for WinGet to report the download size…</value></data>
+  <data name="Winget_DownloadedSizeUnknownTotal" xml:space="preserve"><value>{0} downloaded · Total size unknown</value></data>
+  <data name="Winget_InstallerProgressUnavailable" xml:space="preserve"><value>No percentage is reported yet. Follow the installer or Windows permission prompt if one opens.</value></data>
+  <data name="Winget_OperationProgressPending" xml:space="preserve"><value>Preparing the operation. Download and installation progress will appear here.</value></data>
   <data name="Winget_Phase_Installing" xml:space="preserve">
     <value>Installing software…</value>
   </data>
@@ -4474,7 +4479,7 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_ScanRange.Header" xml:space="preserve"><value>Time range</value></data>
   <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>Include Security and Firewall logs (requires administrator)</value></data>
   <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>Audit history</value></data>
-  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>Weekly audit report</value></data>
+  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>Stability weekly report</value></data>
   <data name="AIHub_WeeklyLoading" xml:space="preserve"><value>Reading audit history…</value></data>
   <data name="AIHub_Inventory_Growth" xml:space="preserve"><value>Up {0} since the previous scan</value></data>
   <data name="AIHub_Inventory_Shrink" xml:space="preserve"><value>Down {0} since the previous scan</value></data>
@@ -4860,5 +4865,14 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   </data>
   <data name="AIHub_AuditElapsed_UnderSecond" xml:space="preserve">
     <value>&lt; 1 s</value>
+  </data>
+  <data name="AIHub_Segment_WeeklyReport.Content" xml:space="preserve">
+    <value>Weekly report</value>
+  </data>
+  <data name="AIHub_WeeklyPolicyHeading" xml:space="preserve">
+    <value>Weekly report instructions</value>
+  </data>
+  <data name="AIHub_WeeklyPolicyDescription" xml:space="preserve">
+    <value>Review seven days of stability evidence, distinguish scan references from fresh observations, and provide verified next steps.</value>
   </data>
 </root>

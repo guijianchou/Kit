@@ -8,17 +8,37 @@ namespace Kit.AIHubLib.Models;
 /// <summary>Deterministic report prose grounded in saved observations, without inferred repairs.</summary>
 internal static class AuditReportFormatter
 {
-    public static string Overview(AuditPeriodReport report, bool chinese)
+    public static string Overview(AuditPeriodReport report, bool chinese) => string.Join(Environment.NewLine + Environment.NewLine,
+        Sections(report, chinese).Select(section => section.Title + Environment.NewLine + section.Text)) + Environment.NewLine;
+    public static System.Collections.Generic.IReadOnlyList<AuditReportSection> Sections(AuditPeriodReport report, bool chinese)
     {
+        var sections = new System.Collections.Generic.List<AuditReportSection>();
+        string heading = chinese ? "报告范围" : "Report scope";
         var text = new StringBuilder().AppendLine(CultureInfo.CurrentCulture, $"{report.StartDate:yyyy-MM-dd} – {report.EndDate:yyyy-MM-dd}");
         if (report.ArchiveUnavailable)
             text.AppendLine(chinese ? "历史摘要存档无法读取，本报告仅使用当前审计历史；已有存档未覆盖。" : "The daily archive could not be read; this report uses current audit history only. Existing exports were preserved.");
         if (report.HistoryIncomplete)
-            text.AppendLine(chinese ? "部分历史证据已超出保留范围或来自旧版摘要，当前结果不完整；已有导出未覆盖。" : "Some historical evidence was trimmed or comes from older daily summaries. This report is incomplete; existing exports were preserved.");
+        {
+            text.AppendLine(report.CurrentHistoryIncomplete
+                ? chinese ? "本期历史证据存在保留期限或摘要缺口；本期判断仅覆盖现存证据。" : "Current-period history has retention or summary gaps; the assessment covers retained evidence only."
+                : chinese ? "对比期历史证据不完整；不据此推断本期改善或修复。" : "Baseline history is incomplete; it cannot establish current-period improvement or recovery.");
+        }
         if (report.Days.Count == 0)
-            return text.AppendLine(chinese ? "此时段没有保存的审计记录。" : "No saved audits in this period.").ToString();
+        {
+            text.AppendLine(chinese ? "此时段没有保存的审计记录。" : "No saved audits in this period.");
+            sections.Add(new(heading, text.ToString().Trim()));
+            return sections;
+        }
 
-        Heading(text, chinese ? "本期总评" : "Overall assessment");
+        var highlights = report.Highlights(chinese);
+        sections.Add(new(chinese ? "系统稳定性评估" : "System stability assessment",
+            highlights.Assessment + Environment.NewLine + highlights.AssessmentDetail + Environment.NewLine + highlights.CoverageSummary));
+
+        text.AppendLine(chinese ? $"已完成 AI 审计 {report.CompletedAiAudits} 次；未完成 AI 审计 {report.IncompleteAiAudits} 次。"
+            : $"Completed AI audits: {report.CompletedAiAudits}; incomplete AI audits: {report.IncompleteAiAudits}.");
+        if (report.Models.Count > 0) text.AppendLine((chinese ? "完成审计的模型：" : "Completed audit models: ") + string.Join(", ", report.Models));
+
+        BeginSection(chinese ? "本期总评" : "Overall assessment");
         int high = report.Issues.Count(issue => issue.Latest.IsHigh);
         int medium = report.Issues.Count(issue => issue.Latest.IsMedium);
         text.AppendLine(report.Issues.Count == 0
@@ -32,7 +52,7 @@ internal static class AuditReportFormatter
         text.AppendLine(chinese ? "本报告依据保存的本地与 AI 观察整理；严重程度是待核实的优先级，不代表已确认攻击或故障根因。"
             : "This report summarizes saved local and AI observations. Severity guides verification; it does not establish an attack or a confirmed root cause.");
 
-        Heading(text, chinese ? "本期变化" : "Changes during the period");
+        BeginSection(chinese ? "本期变化" : "Changes during the period");
         if (report.PreviousDays.Count == 0)
         {
             text.AppendLine(chinese ? "对比时段没有记录，无法判断变化。" : "No recorded baseline; change cannot be determined.");
@@ -60,30 +80,29 @@ internal static class AuditReportFormatter
                 : "Score trend withheld: scan windows, collection completeness or analysis methods differ or are unknown. These scores cannot establish system improvement.");
         }
 
-        Heading(text, chinese ? "优先行动（最多 5 项）" : "Priority actions (up to 5)");
+        BeginSection(chinese ? "重点行动（最多 3 项）" : "Priority actions (up to 3)");
         if (report.Issues.Count == 0) text.AppendLine(chinese ? "当前没有可从保存证据提出的处理项；按覆盖情况决定是否补充扫描。" : "No action is supported by the saved findings. Use coverage information to decide whether another scan is needed.");
         int index = 0;
-        foreach (var issue in report.Issues.Take(5))
+        foreach (var priority in highlights.Priorities)
         {
+            var issue = priority.Issue;
             var finding = issue.Latest;
             text.AppendLine(CultureInfo.CurrentCulture, $"{++index}. [{Risk(finding, chinese)}] {Preview(Title(finding, chinese), 180)}");
-            string description = Local(finding.Description, finding.DescriptionZh, chinese);
-            if (!string.IsNullOrWhiteSpace(description)) text.AppendLine((chinese ? "   依据：" : "   Evidence: ") + Preview(description, 240));
-            var check = finding.EffectiveRemediationPlan.Checks?.FirstOrDefault(item => item is not null && !string.IsNullOrWhiteSpace(Local(item.Check, item.CheckZh, chinese)));
-            string next = check is null ? Local(finding.Recommendation, finding.RecommendationZh, chinese) : Local(check.Check, check.CheckZh, chinese);
-            text.AppendLine((chinese ? "   下一步：" : "   Next step: ") + Preview(OrUnknown(next, chinese), 600));
-            if (check is not null)
-                text.AppendLine((chinese ? "   判断标准：" : "   Decision criteria: ") + Preview(OrUnknown(Local(check.ExpectedResult, check.ExpectedResultZh, chinese), chinese), 300));
+            text.AppendLine("   " + priority.Context);
+            if (!string.IsNullOrWhiteSpace(priority.Evidence)) text.AppendLine((chinese ? "   依据：" : "   Evidence: ") + priority.Evidence);
+            text.AppendLine((chinese ? "   检查：" : "   Check: ") + OrUnknown(priority.Check, chinese));
+            text.AppendLine((chinese ? "   条件整改：" : "   Conditional action: ") + OrUnknown(priority.Action, chinese));
+            text.AppendLine((chinese ? "   验证：" : "   Verification: ") + OrUnknown(priority.Verification, chinese));
         }
         if (report.Issues.Count > 0) text.AppendLine(chinese ? "以上为行动摘要；执行前请阅读完整问题明细中的条件处理、风险与验证步骤。" : "These are action summaries. Read the full finding's conditions, risks and verification steps before making changes.");
 
-        Heading(text, chinese ? "处理与验证" : "Actions and verification");
+        BeginSection(chinese ? "处理与验证" : "Actions and verification");
         text.AppendLine(chinese ? "审计记录没有可核验的修复执行收据，本报告不将任何问题标记为已修复。建议步骤不代表已经执行。"
             : "Audit records contain no verified repair receipts, so this report does not mark issues as repaired. Recommended steps are not completed actions.");
         text.AppendLine(chinese ? "完成处理后，按对应方案复现原场景并收集新的验证证据。问题未再次出现、日志缺失或分数回升，都不能单独证明恢复。"
             : "After a change, repeat the affected scenario and collect the plan's verification evidence. Absence of recurrence, missing logs or a higher score alone cannot establish recovery.");
 
-        Heading(text, chinese ? "证据覆盖与统计口径" : "Coverage and interpretation");
+        BeginSection(chinese ? "证据覆盖与统计口径" : "Coverage and interpretation");
         int totalDays = report.EndDate.DayNumber - report.StartDate.DayNumber + 1;
         text.AppendLine(chinese
             ? $"已记录 {report.Days.Count}/{totalDays} 天，共 {report.Days.Sum(day => day.Audits)} 次审计。健康分取每日最后一次扫描，问题汇总当天所有观察；分数回升不代表此前问题已解决。"
@@ -119,7 +138,36 @@ internal static class AuditReportFormatter
         }
         AppendChannels(text, chinese ? "未读取渠道：" : "Unreadable channels: ", report.Coverage.SkippedChannels);
         AppendChannels(text, chinese ? "达到数量上限的渠道：" : "Truncated channels: ", report.Coverage.LimitedChannels);
-        return text.ToString();
+        sections.Add(new(heading, text.ToString().Trim()));
+        text.Clear().AppendLine(chinese ? "每个扫描保存日内的问题组去重并取最高严重程度；重叠窗口不累加为事件次数。缺少扫描记录的日期不补零。"
+            : "Issue groups are deduplicated across all saved scans on each date at their highest severity. Overlapping windows are not event counts. Missing scan dates are not filled with zero.");
+        foreach (var day in report.TrendDays)
+        {
+            text.AppendLine(day.Scans == 0 ? $"{day.Date:MM-dd} · " + (chinese ? "无保存扫描" : "No saved scan")
+                : chinese ? $"{day.Date:MM-dd} · 稳定性 {day.Stability} 组 · 高/中/低 {day.High}/{day.Medium}/{day.Low} 组"
+                    : $"{day.Date:MM-dd} · stability {day.Stability} groups · high/medium/low {day.High}/{day.Medium}/{day.Low} groups");
+            if (day.EvidenceLimited || day.AiIncomplete || day.MetadataUnknown)
+            {
+                text.AppendLine(chinese ? "  证据受限、分析未完成或采集范围未知，不能作为完整覆盖。" : "  Evidence, analysis or collection metadata is incomplete; coverage is not assured.");
+            }
+        }
+        sections.Add(new(chinese ? "每日异常观察" : "Daily issue observations", text.ToString().Trim()));
+        text.Clear().AppendLine(chinese ? "仅依据 Stability / Reliability 分类；受影响组件或事件来源按去重问题组排行，不是崩溃次数。"
+            : "Stability / Reliability classifications only. Affected components or event sources are ranked by deduplicated issue groups, not crash counts.");
+        foreach (var component in highlights.Components)
+        {
+            text.AppendLine(CultureInfo.CurrentCulture, $"{component.Label} · {component.Count} · {component.Detail}");
+        }
+        if (highlights.Components.Count == 0) text.AppendLine(chinese ? "未记录稳定性分类组件。" : "No stability-classified components recorded.");
+        sections.Add(new(chinese ? "主要受影响组件" : "Leading affected components", text.ToString().Trim()));
+        return sections;
+
+        void BeginSection(string title)
+        {
+            sections.Add(new(heading, text.ToString().Trim()));
+            text.Clear();
+            heading = title;
+        }
     }
 
     public static string Details(AuditPeriodReport report, bool chinese)

@@ -216,6 +216,64 @@ public sealed class OptimizationExpandedScopeTests
         Assert.IsFalse(items.Any(i => i.FilePath == cargoBin), "Installed Cargo binaries must never be offered for cleanup.");
     }
 
+    [TestMethod]
+    public async Task ExplicitDevelopmentArtifactsInsideTempRequireGitAndProjectEvidenceAtExecution()
+    {
+        using var fixture = new FixtureDirectory();
+        string temp = fixture.PathFor("Temp");
+        string root = Path.Combine(temp, "Codings");
+        string repo = Path.Combine(root, "Example");
+        Directory.CreateDirectory(repo);
+        try
+        {
+            Git(repo, "init", "--quiet");
+            Old(Path.Combine(repo, "Example.csproj"));
+            Old(Path.Combine(repo, "Example.sln"));
+            Old(Path.Combine(repo, ".gitignore"), "obj/\n");
+            string artifact = Path.Combine(repo, "obj", "cache.obj");
+            string tracked = Path.Combine(repo, "obj", "tracked.obj");
+            Old(artifact);
+            Old(tracked);
+            var deleted = new List<string>();
+            var service = new CacheCleanupService(fixture.PathFor("Local"), temp, path =>
+            {
+                deleted.Add(path);
+                return (true, null);
+            }, developmentRoot: root);
+            var candidates = await service.ScanAsync();
+            CollectionAssert.AreEquivalent(new[] { artifact, tracked }, candidates.Select(item => item.FilePath).ToArray());
+            Assert.IsTrue(candidates.All(item => item.DevelopmentRepository == repo));
+
+            var candidate = candidates.Single(item => item.FilePath == artifact);
+            candidate.ReviewState = "approved";
+            candidate.DevelopmentRepository = string.Empty;
+            Assert.IsFalse(service.CleanupItem(candidate).Success, "Temp classification alone must not authorize project cleanup.");
+            candidate.DevelopmentRepository = Path.Combine(root, "Forged");
+            Assert.IsFalse(service.CleanupItem(candidate).Success, "An unverified repository field cannot authorize cleanup.");
+            candidate.DevelopmentRepository = repo;
+            Assert.IsTrue(service.CleanupItem(candidate).Success);
+
+            Git(repo, "add", "-f", "obj/tracked.obj");
+            Assert.IsFalse(service.CleanupItem(candidates.Single(item => item.FilePath == tracked)).Success);
+            File.Delete(Path.Combine(repo, "Example.sln"));
+            Assert.IsFalse(service.CleanupItem(candidate).Success, "Project evidence must still exist at execution.");
+            CollectionAssert.AreEqual(new[] { artifact }, deleted.ToArray());
+            Assert.IsTrue(File.Exists(artifact));
+            Assert.IsTrue(File.Exists(tracked));
+        }
+        finally
+        {
+            string gitRoot = Path.Combine(repo, ".git");
+            if (Directory.Exists(gitRoot))
+            {
+                foreach (string path in Directory.EnumerateFiles(gitRoot, "*", SearchOption.AllDirectories))
+                {
+                    File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+                }
+            }
+        }
+    }
+
     private static void Old(string path, string content = "fixture")
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

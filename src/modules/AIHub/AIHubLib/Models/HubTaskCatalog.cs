@@ -4,4 +4,5 @@ public static class HubTaskCatalog
 {
     public const string SecurityAuditId = "security-audit";
     public const string OptimizationId = "system-optimization";
+    public const string WeeklyReportId = "windows-stability-report";
 }

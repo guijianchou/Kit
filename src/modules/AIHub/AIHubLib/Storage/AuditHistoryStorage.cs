@@ -13,6 +13,7 @@ namespace Kit.AIHubLib.Storage;
 
 public sealed class AuditHistoryStorage
 {
+    public const int RetentionDays = 30;
     private readonly string _storagePath;
     private readonly object _lock = new();
     private readonly string _mutexName;
@@ -73,34 +74,89 @@ public sealed class AuditHistoryStorage
         }
     });
 
+    public Task<AuditStabilityReportDocument> LoadPeriodReportDocumentAsync(DateOnly endDate, TimeZoneInfo zone, bool monthly) => Task.Run(() =>
+    {
+        lock (_lock)
+        {
+            using var mutex = new Mutex(false, _mutexName);
+            AcquireMutex(mutex);
+            try
+            {
+                var history = ReadHistory();
+                string path = ReportPath(endDate, monthly);
+                if (endDate < OldestReportDate()) throw new InvalidDataException("The selected report is outside the 30-day retention period.");
+                AuditPeriodReport report;
+                try
+                {
+                    var archive = AuditReportArchiveStorage.Update(ReportsDirectory, history);
+                    report = AuditReportArchiveStorage.Report(archive, endDate, zone, monthly);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+                {
+                    report = AuditPeriodReport.From(history, endDate, zone, monthly) with { ArchiveUnavailable = true };
+                }
+
+                if ((report.ArchiveUnavailable || report.CurrentRetainedHistoryIncomplete) && File.Exists(path))
+                {
+                    // Retained evidence cannot replace an existing, fuller document.
+                    // Reading the previous version also works on the first window open.
+                    return AuditStabilityReportDocument.Read(path) with { RefreshFailed = true };
+                }
+
+                SavePeriodReport(report, monthly);
+                var document = AuditStabilityReportDocument.Read(path);
+                if (document.Monthly != monthly || document.Report.EndDate != endDate)
+                    throw new InvalidDataException("The saved report does not match the selected period.");
+                return document;
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+    });
+
     public string ReportsDirectory => Path.Combine(Path.GetDirectoryName(_storagePath)!, "reports");
 
     private AuditPeriodReport SavePeriodReport(AuditPeriodReport report, bool monthly)
     {
+        PruneReportExports();
+        if (report.EndDate < OldestReportDate()) return report;
         Directory.CreateDirectory(ReportsDirectory);
-        string prefix = monthly ? "monthly-" : "weekly-";
-        string path = Path.Combine(ReportsDirectory, prefix + report.EndDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + ".md");
-        if (report.HistoryIncomplete && File.Exists(path)) return report;
+        string path = ReportPath(report.EndDate, monthly);
+        if (report.CurrentRetainedHistoryIncomplete && File.Exists(path)) return report;
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            File.WriteAllText(temporary, "# " + (monthly ? "审计月报 / Monthly audit report" : "审计周报 / Weekly audit report")
-                + Environment.NewLine + Environment.NewLine + report.Format(chinese: true) + Environment.NewLine + report.Format(chinese: false));
+            var document = AuditStabilityReportDocument.Create(report, monthly);
+            File.WriteAllText(temporary, document.Markdown);
+            _ = AuditStabilityReportDocument.Read(temporary);
             File.Move(temporary, path, overwrite: true);
-            // Keep at most 93 dated exports per kind. Only files with our exact generated names qualify.
-            foreach (var old in Directory.EnumerateFiles(ReportsDirectory, prefix + "*.md")
-                .Where(file => DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(file).AsSpan(prefix.Length), "yyyy-MM-dd",
-                    System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
-                .OrderByDescending(file => file, StringComparer.Ordinal).Skip(93))
-            {
-                File.Delete(old);
-            }
             return report;
         }
         finally
         {
             try { File.Delete(temporary); }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+        }
+    }
+
+    private string ReportPath(DateOnly endDate, bool monthly) => Path.Combine(ReportsDirectory,
+        (monthly ? "monthly-" : "weekly-") + endDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + ".md");
+
+    private static DateOnly OldestReportDate() => DateOnly.FromDateTime(DateTime.Now).AddDays(1 - RetentionDays);
+
+    private void PruneReportExports()
+    {
+        if (!Directory.Exists(ReportsDirectory)) return;
+        foreach (string prefix in new[] { "weekly-", "monthly-" })
+        {
+            foreach (string file in Directory.EnumerateFiles(ReportsDirectory, prefix + "*.md"))
+            {
+                if (DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(file).AsSpan(prefix.Length), "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date)
+                    && date < OldestReportDate()) File.Delete(file);
+            }
         }
     }
 
@@ -123,6 +179,7 @@ public sealed class AuditHistoryStorage
 
     private List<AuditResult> ReadHistory()
     {
+        PruneReportExports();
         string json;
         try
         {
@@ -134,9 +191,31 @@ public sealed class AuditHistoryStorage
         }
 
         // A damaged/unreadable history must never become an empty history on the next save.
-        return JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult)
+        var history = JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult)
             ?? throw new InvalidDataException("The audit history does not contain a valid list.");
+        if (history.RemoveAll(result => Utc(result.Timestamp) < DateTime.UtcNow.AddDays(-RetentionDays)) > 0)
+        {
+            WriteHistory(history);
+        }
+        return history;
     }
+
+    private void WriteHistory(List<AuditResult> history)
+    {
+        string temporary = _storagePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(history, AIHubLibJsonContext.Default.ListAuditResult));
+            File.Move(temporary, _storagePath, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
+    }
+
+    private static DateTime Utc(DateTime timestamp) => timestamp.Kind == DateTimeKind.Local
+        ? timestamp.ToUniversalTime() : DateTime.SpecifyKind(timestamp, DateTimeKind.Utc);
 
     private static void AcquireMutex(Mutex mutex)
     {
@@ -173,11 +252,11 @@ public sealed class AuditHistoryStorage
                 // Local findings and later AI results share the scan's stable timestamp.
                 // Updating that snapshot must not manufacture a second scan in statistics.
                 history.RemoveAll(r => r.Timestamp == result.Timestamp);
-                history.Insert(0, result);
+                if (Utc(result.Timestamp) >= DateTime.UtcNow.AddDays(-RetentionDays)) history.Insert(0, result);
                 history.Sort((left, right) => right.Timestamp.CompareTo(left.Timestamp));
                 // Archive before raw-history eviction, including a late AI revision of an old scan.
                 var archiveInputs = history.ToArray();
-                history.RemoveAll(r => r.Timestamp != result.Timestamp && r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
+                history.RemoveAll(r => Utc(r.Timestamp) < DateTime.UtcNow.AddDays(-Math.Clamp(retentionDays, 1, RetentionDays)));
 
                 if (history.Count > MaxRetainedAudits)
                 {

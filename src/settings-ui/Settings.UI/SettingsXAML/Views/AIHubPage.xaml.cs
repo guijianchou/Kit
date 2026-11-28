@@ -263,6 +263,18 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage, ILiveLo
         }
     }
 
+    private void OnScanButtonLoaded(object sender, RoutedEventArgs args)
+    {
+        // A cached page can finish its audit while detached. WinUI updates the
+        // inner buttons but retains the outer Disabled state until it is loaded
+        // again; reconcile that state after the template is available.
+        if (sender is SplitButton button)
+        {
+            button.ApplyTemplate();
+            VisualStateManager.GoToState(button, button.IsEnabled ? "Normal" : "Disabled", useTransitions: false);
+        }
+    }
+
     private void OnSelectedScanClick(SplitButton sender, SplitButtonClickEventArgs args)
     {
         sender.Flyout?.Hide();

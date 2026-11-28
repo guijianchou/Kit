@@ -344,11 +344,13 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                     "prepare" => "Preparing",
                     "details" => "LoadingDetails",
                     "download" => "Downloading",
-                    "install" => "Installing",
-                    "upgrade" => "Installing",
+                    "install" => "Starting",
+                    "upgrade" => "Starting",
                     _ => "Starting",
                 },
                 ProgressPercent = null,
+                BytesDownloaded = null,
+                BytesRequired = null,
                 Message = null,
                 Output = null,
                 LastResult = null,
@@ -536,6 +538,9 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                 {
                     IsBusy = false,
                     Phase = result?.Succeeded == true ? "Completed" : result?.Install?.Cancelled == true || (result?.Install is null && token.IsCancellationRequested) ? "Cancelled" : "Failed",
+                    ProgressPercent = null,
+                    BytesDownloaded = null,
+                    BytesRequired = null,
                     Message = result?.Message,
                     LastResult = result,
                     Packages = _state.PendingInstall is null ? _status.Packages : [],
@@ -686,6 +691,10 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                     {
                         Phase = owner._status.Phase == "Cancelling" ? "Cancelling" : value.Stage,
                         ProgressPercent = owner._status.Phase == "Cancelling" ? owner._status.ProgressPercent : value.Percentage,
+                        BytesDownloaded = owner._status.Phase == "Cancelling" ? owner._status.BytesDownloaded
+                            : value.Stage == "Downloading" && (value.BytesDownloaded > 0 || value.BytesRequired > 0) ? value.BytesDownloaded : null,
+                        BytesRequired = owner._status.Phase == "Cancelling" ? owner._status.BytesRequired
+                            : value.Stage == "Downloading" && value.BytesRequired > 0 ? value.BytesRequired : null,
                         Output = value.Output is null ? owner._status.Output : BoundOutput(value.Output),
                     };
                 }

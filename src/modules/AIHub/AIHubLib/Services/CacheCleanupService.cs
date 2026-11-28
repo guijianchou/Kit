@@ -28,7 +28,8 @@ public sealed class CacheCleanupService
         bool TempOnly = false,
         bool ThumbnailsOnly = false,
         bool TempResidual = false,
-        string EvidenceKind = "cache-whitelist");
+        string EvidenceKind = "cache-whitelist",
+        bool TemporaryBuildOnly = false);
 
     public CacheCleanupService()
         : this(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Path.GetTempPath(), DeleteFile,
@@ -46,6 +47,8 @@ public sealed class CacheCleanupService
         _inventory = new OptimizationInventoryService(localAppData, tempPath, userProfile, roamingAppData);
         List<CacheLocation> locations =
         [
+            new("Temporary build files", Path.GetFullPath(tempPath), RiskLevel.Medium, EvidenceKind: "temp-residual", TemporaryBuildOnly: true),
+            new("Temporary build files", Path.Combine(localAppData, "Temp"), RiskLevel.Medium, EvidenceKind: "temp-residual", TemporaryBuildOnly: true),
             new("Temporary files", Path.GetFullPath(tempPath), RiskLevel.Low, TempOnly: true),
             new("Temporary files", Path.Combine(localAppData, "Temp"), RiskLevel.Low, TempOnly: true),
             new("Temporary residuals", Path.GetFullPath(tempPath), RiskLevel.Medium, TempResidual: true, EvidenceKind: "temp-residual"),
@@ -59,6 +62,9 @@ public sealed class CacheCleanupService
             new("pnpm cache", Path.Combine(localAppData, "pnpm", "cache"), RiskLevel.Low),
             new("pnpm cache", Path.Combine(localAppData, "pnpm-cache"), RiskLevel.Low, EvidenceKind: "cache-residual"),
             new("Go build cache", Path.Combine(localAppData, "go-build"), RiskLevel.Medium, EvidenceKind: "cache-residual"),
+            new("ccache compiler cache", Path.Combine(localAppData, "ccache"), RiskLevel.Medium, EvidenceKind: "cache-residual"),
+            new("sccache compiler cache", Path.Combine(localAppData, "Mozilla", "sccache"), RiskLevel.Medium, EvidenceKind: "cache-residual"),
+            new("Temporary Internet files", Path.Combine(localAppData, "Microsoft", "Windows", "INetCache", "IE"), RiskLevel.Medium, EvidenceKind: "cache-residual"),
             new("Yarn cache", Path.Combine(localAppData, "Yarn", "Cache"), RiskLevel.Low, EvidenceKind: "cache-residual"),
             new("Thumbnail cache", Path.Combine(localAppData, "Microsoft", "Windows", "Explorer"), RiskLevel.Medium, ThumbnailsOnly: true),
             new("Crash dumps", Path.Combine(localAppData, "CrashDumps"), RiskLevel.Medium, EvidenceKind: "cache-residual"),
@@ -90,7 +96,8 @@ public sealed class CacheCleanupService
         }
         foreach (string profile in DiscoverBrowserProfiles(Path.Combine(localAppData, "Mozilla", "Firefox", "Profiles"), chromium: false, includeDefault: true))
             locations.Add(new($"Firefox {Path.GetFileName(profile)} cache", Path.Combine(profile, "cache2"), RiskLevel.Medium, EvidenceKind: "cache-residual"));
-        foreach (string cache in new[] { "D3DSCache", @"AMD\DxCache", @"AMD\GLCache", @"NVIDIA\DXCache", @"NVIDIA\GLCache", @"NuGet\v3-cache" })
+        locations.Add(new("DirectX Shader Cache", Path.Combine(localAppData, "D3DSCache"), RiskLevel.Medium));
+        foreach (string cache in new[] { @"AMD\DxCache", @"AMD\GLCache", @"NVIDIA\DXCache", @"NVIDIA\GLCache", @"NuGet\v3-cache" })
             locations.Add(new(cache.Replace('\\', ' '), Path.Combine(localAppData, cache), RiskLevel.Medium));
         if (!string.IsNullOrEmpty(userProfile))
         {
@@ -143,6 +150,10 @@ public sealed class CacheCleanupService
     {
         if (OptimizationProtectionPolicy.IsProtectedFromCleanup(file.FullName)) return false;
 
+        if (IsTemporaryLocation(location) && !TemporaryCleanupPolicy.IsRecognizedFile(file.FullName)) return false;
+
+        if (location.TemporaryBuildOnly) return TemporaryCleanupPolicy.IsBuildArtifact(file.FullName);
+
         if (location.ThumbnailsOnly)
         {
             return string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase) &&
@@ -157,11 +168,14 @@ public sealed class CacheCleanupService
 
         if (location.TempResidual)
         {
-            return !file.Extension.Equals(".tmp", StringComparison.OrdinalIgnoreCase) && !file.Extension.Equals(".temp", StringComparison.OrdinalIgnoreCase);
+            return !TemporaryCleanupPolicy.IsBuildArtifact(file.FullName)
+                && !file.Extension.Equals(".tmp", StringComparison.OrdinalIgnoreCase) && !file.Extension.Equals(".temp", StringComparison.OrdinalIgnoreCase);
         }
 
         return true;
     }
+
+    private static bool IsTemporaryLocation(CacheLocation location) => location.TempOnly || location.TempResidual || location.TemporaryBuildOnly;
 
     private static IEnumerable<string> DiscoverBrowserProfiles(string root, bool chromium, bool includeDefault)
     {
@@ -251,7 +265,7 @@ public sealed class CacheCleanupService
             .Select(group => (
                 Root: group.Key,
                 Locations: group
-                    .DistinctBy(l => (l.Name, l.TempOnly, l.TempResidual, l.ThumbnailsOnly, l.EvidenceKind, l.Risk))
+                    .DistinctBy(l => (l.Name, l.TempOnly, l.TempResidual, l.ThumbnailsOnly, l.TemporaryBuildOnly, l.EvidenceKind, l.Risk))
                     .ToArray()))
             .ToArray();
 
@@ -265,6 +279,7 @@ public sealed class CacheCleanupService
             }
 
             bool thumbnailsOnlyRoot = group.Locations.All(location => location.ThumbnailsOnly);
+            bool temporaryRoot = group.Locations.Any(IsTemporaryLocation);
             bool isNuGetPackagesRoot = group.Locations.Any(location => location.Name == "NuGet packages");
             var visitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var pending = new Stack<string>();
@@ -296,6 +311,9 @@ public sealed class CacheCleanupService
                     }
 
                     IReadOnlySet<string> siblingSidecars = sidecarNames ?? EmptyFileNames;
+                    // TEMP can contain a checkout or an unpacked project. Its artifacts need
+                    // the explicit development scanner's Git/project evidence, not a Temp rule.
+                    if (temporaryRoot && entries.Any(entry => TemporaryCleanupPolicy.IsProjectMarker(entry.Name))) continue;
                     foreach (var entry in entries)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -507,9 +525,11 @@ public sealed class CacheCleanupService
             var matchedLocation = Array.Find(_whitelist, location => MatchesLocation(file, location));
             bool inScope = matchedLocation != null
                 && (string.IsNullOrEmpty(item.Category) || string.Equals(item.Category, matchedLocation.Name, StringComparison.Ordinal))
-                && item.Risk >= matchedLocation.Risk;
+                && item.Risk >= matchedLocation.Risk
+                && (!IsTemporaryLocation(matchedLocation) || TemporaryCleanupPolicy.HasNoProjectAncestor(file.FullName, matchedLocation.Path, cancellationToken));
             bool development = false;
-            if (!inScope && matchedLocation == null && _developmentRoot != null)
+            if (!inScope && _developmentRoot != null && !string.IsNullOrEmpty(item.DevelopmentRepository)
+                && (matchedLocation == null || IsTemporaryLocation(matchedLocation)))
             {
                 development = DevelopmentCacheScanner.IsEligible(file, _developmentRoot, item.DevelopmentRepository, item.BuildManifestPath, ignoredPaths, cancellationToken);
                 inScope = development;
@@ -555,7 +575,7 @@ public sealed class CacheCleanupService
             var result = _delete(file.FullName);
             if (result.Success)
             {
-                var location = Array.Find(_whitelist, entry => !entry.TempOnly && !entry.TempResidual && !entry.ThumbnailsOnly && MatchesLocation(file, entry));
+                var location = Array.Find(_whitelist, entry => !IsTemporaryLocation(entry) && !entry.ThumbnailsOnly && MatchesLocation(file, entry));
                 if (location != null) RemoveEmptyParents(file.DirectoryName!, location.Path);
             }
             return (result.Success, false, result.Error);

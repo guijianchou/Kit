@@ -374,6 +374,19 @@ internal static partial class TypographySmoke
         {
             await OpenUsage("AI usage flyout loaded");
             await Settled();
+            var rangeField = typeof(ShellPage).GetField("_aiUsageRange", PrivateInstance);
+            Require((Kit.AiHub.Models.AiUsageTimeRange)rangeField.GetValue(shell) == Kit.AiHub.Models.AiUsageTimeRange.Today,
+                "Each usage opening defaults to the machine's local Today range.");
+            var allRangeButton = Element<Button>(shell, "AiUsageRangeAllButton");
+            typeof(ShellPage).GetMethod("AiUsageRangeButton_Click", PrivateInstance).Invoke(shell, new object[] { allRangeButton, new RoutedEventArgs() });
+            await Settled();
+            Require((Kit.AiHub.Models.AiUsageTimeRange)rangeField.GetValue(shell) == Kit.AiHub.Models.AiUsageTimeRange.AllTime,
+                "A different usage range remains selectable while the flyout is open.");
+            await CloseUsage("Usage closes after selecting all retained history");
+            await OpenUsage("Usage reopens with today's data");
+            await Settled();
+            Require((Kit.AiHub.Models.AiUsageTimeRange)rangeField.GetValue(shell) == Kit.AiHub.Models.AiUsageTimeRange.Today,
+                "Reopening usage resets a previous AllTime selection to Today.");
             Require(ReferenceEquals(engine, Kit.AiHub.Engine.AiHubEngine.ExistingEngine) && ReferenceEquals(selected, navigation.SelectedItem),
                 "Opening usage neither creates/replaces the AI engine nor changes the current page.");
             if (engine != null)

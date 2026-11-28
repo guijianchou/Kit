@@ -23,8 +23,8 @@ internal sealed class WingetCliProcessRunner : IWingetCliProcessRunner
             throw new WingetOperationException("Windows Package Manager could not be started.");
         }
 
-        // Retain a bounded plain-text tail without interpreting localized messages
-        // as percentages. Native installer UI and UAC remain owned by WinGet.
+        // Retain a bounded plain-text tail. Native installer UI and UAC remain
+        // owned by WinGet; progress interpretation cannot alter the exit result.
         var outputBuffer = new WingetOutputBuffer();
         var clock = Stopwatch.StartNew();
         using var drainCancellation = new CancellationTokenSource();
@@ -120,7 +120,7 @@ internal sealed class WingetCliProcessRunner : IWingetCliProcessRunner
 
 internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
 {
-    private readonly IWingetCliProcessRunner _runner = runner ?? new WingetCliProcessRunner();
+    private readonly IWingetCliProcessRunner _runner = runner ?? new WingetPseudoConsoleRunner();
 
     internal static string ExecutablePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "winget.exe");
@@ -139,7 +139,7 @@ internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
         foreach (string argument in new[]
         {
             upgrade ? "upgrade" : "install", "--id", package.Id, "--exact", "--version", package.AvailableVersion,
-            "--source", "winget", options.Silent ? "--silent" : "--interactive", "--disable-interactivity",
+            "--source", "winget", options.Silent ? "--silent" : "--interactive", "--disable-interactivity", "--output-locale", "en-US",
         })
         {
             start.ArgumentList.Add(argument);
@@ -178,7 +178,7 @@ internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
         foreach (string argument in new[]
         {
             "uninstall", "--id", package.Id, "--exact", "--version", package.InstalledVersion,
-            options.Silent ? "--silent" : "--interactive", "--disable-interactivity",
+            options.Silent ? "--silent" : "--interactive", "--disable-interactivity", "--output-locale", "en-US",
         })
         {
             start.ArgumentList.Add(argument);
@@ -224,15 +224,31 @@ internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
     {
         token.ThrowIfCancellationRequested();
         string? output = null;
-        Report(progress, "WaitingForInstaller");
+        var interpreter = new WingetCliProgress();
+        var gate = new object();
+        WingetOperationProgress latest = new("Starting", null);
+        Report(progress, latest);
         int exitCode = await _runner.RunAsync(
             start,
             snapshot =>
             {
-                output = snapshot;
-                Report(progress, "WaitingForInstaller", snapshot);
+                lock (gate)
+                {
+                    output = snapshot;
+                    latest = token.IsCancellationRequested
+                        ? latest with { Stage = "Cancelling", Output = snapshot }
+                        : interpreter.Read(snapshot);
+                    Report(progress, latest);
+                }
             },
-            () => Report(progress, "Cancelling"),
+            () =>
+            {
+                lock (gate)
+                {
+                    latest = latest with { Stage = "Cancelling" };
+                    Report(progress, latest);
+                }
+            },
             token).ConfigureAwait(false);
         return MapExitCode(exitCode) with { CancellationRequested = token.IsCancellationRequested, Output = output };
     }
@@ -278,11 +294,11 @@ internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
         }
     }
 
-    private static void Report(IProgress<WingetOperationProgress>? progress, string stage, string? output = null)
+    private static void Report(IProgress<WingetOperationProgress>? progress, WingetOperationProgress value)
     {
         try
         {
-            progress?.Report(new WingetOperationProgress(stage, null) { Output = output });
+            progress?.Report(value);
         }
         catch (Exception)
         {

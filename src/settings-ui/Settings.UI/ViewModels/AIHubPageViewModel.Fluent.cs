@@ -12,6 +12,7 @@ using System.Linq;
 using System.Windows.Input;
 using Kit.AiHub.Contract;
 using Kit.AIHubLib.Models;
+using Kit.AIHubLib.Services;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library.Helpers;
 using Microsoft.UI.Xaml;
@@ -508,7 +509,9 @@ public sealed partial class AIHubPageViewModel
 
     public string OptFilterSelectedLabel => OptimizationFilterOptions.Count > 4 ? OptimizationFilterOptions[4] : "AIHub_OptFilter_Selected".GetLocalizedOrFallback("Selected");
 
-    public string TaskPolicyEditorHeading => AiHub.IsOptimizationPolicyTab
+    public string TaskPolicyEditorHeading => AiHub.IsWeeklyReportPolicyTab
+        ? "AIHub_WeeklyPolicyHeading".GetLocalizedOrFallback("Weekly report instructions")
+        : AiHub.IsOptimizationPolicyTab
         ? "AIHub_Fluent_OptPolicyHeading".GetLocalizedOrFallback("Optimization instructions")
         : "AIHub_Fluent_AuditPolicyHeading".GetLocalizedOrFallback("Security audit instructions");
 
@@ -547,6 +550,7 @@ public sealed partial class AIHubPageViewModel
             case nameof(AiHubViewModel.ActivePolicyIndex):
             case nameof(AiHubViewModel.IsOptimizationPolicyTab):
             case nameof(AiHubViewModel.IsSecurityAuditPolicyTab):
+            case nameof(AiHubViewModel.IsWeeklyReportPolicyTab):
                 OnPropertyChanged(nameof(TaskPolicyEditorHeading));
                 OnPropertyChanged(nameof(TaskPolicyCharCountText));
                 OnPropertyChanged(nameof(IsTaskPolicyClean));
@@ -653,10 +657,7 @@ public sealed partial class AIHubPageViewModel
 
     private void RebuildOverviewFindings()
     {
-        var ordered = FilteredIssues.OrderByDescending(issue => issue.IsHigh)
-            .ThenByDescending(issue => issue.IsMedium)
-            .ThenByDescending(issue => issue.Occurrences)
-            .ToList();
+        var ordered = AuditRiskPolicy.OrderFindings(FilteredIssues).ToList();
         OverviewFindings.Clear();
         foreach (var issue in ordered)
         {

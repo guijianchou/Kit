@@ -250,7 +250,9 @@ public sealed class WingetClient : IWingetClient
             result,
             token => !ReadLocalInstalledPackages(WinGetComFactory.CreateManager(), token).Any(candidate =>
                 string.Equals(candidate.InstalledVersion?.Id, validated.InstalledId, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(candidate.InstalledVersion?.Version, validated.Package.InstalledVersion, StringComparison.Ordinal))).ConfigureAwait(false);
+                && string.Equals(candidate.InstalledVersion?.Version, validated.Package.InstalledVersion, StringComparison.Ordinal)),
+            progress,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<WingetInstallResult> RunInstallationAsync(WingetPackageUpdate package, bool upgrade, IProgress<WingetOperationProgress>? progress, bool acceptPackageAgreements, WingetPackageOptions? options, CancellationToken cancellationToken)
@@ -296,14 +298,28 @@ public sealed class WingetClient : IWingetClient
                 var resolved = ResolvePackage(validated, token);
                 return resolved.Package.InstalledVersion is { } installed &&
                     resolved.Version.CompareToVersion(installed.Version) is CompareResult.Equal or CompareResult.Lesser;
-            }).ConfigureAwait(false);
+            },
+            progress,
+            cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<WingetInstallResult> VerifyResultAsync(WingetInstallResult result, Func<CancellationToken, bool> verify)
+    private async Task<WingetInstallResult> VerifyResultAsync(WingetInstallResult result, Func<CancellationToken, bool> verify, IProgress<WingetOperationProgress>? progress, CancellationToken cancellationToken)
     {
         if (!result.Succeeded)
         {
             return result;
+        }
+
+        if (!result.CancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                progress?.Report(new WingetOperationProgress("VerifyingInstall", null) { Output = result.Output });
+            }
+            catch (Exception)
+            {
+                // Display observers must not change a successful install or uninstall.
+            }
         }
 
         // ARP/catalog registration can lag a successful CLI exit. Preserve that success

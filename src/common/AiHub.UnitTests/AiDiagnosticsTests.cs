@@ -394,7 +394,7 @@ public sealed class AiDiagnosticsTests
     }
 
     [TestMethod]
-    public void ExpiredHistoryIsHiddenAndReclaimedByEnabledWritesOnly()
+    public void ReadingReclaimsExpiredHistoryWhileLoggingOffStillPreventsNewRecords()
     {
         using var fixture = new FixtureDirectory();
         string preference = SetLogLevel(fixture, "off");
@@ -409,15 +409,24 @@ public sealed class AiDiagnosticsTests
             TaskRecord("failed") with { RequestId = recentRequest, TimestampUtc = DateTimeOffset.UtcNow.AddDays(-1) },
         ];
         File.WriteAllText(historyPath, JsonSerializer.Serialize(records.ToList(), AiHubJsonContext.Default.ListAiDiagnosticRecord));
-        byte[] before = File.ReadAllBytes(historyPath);
+        byte[] preferenceBefore = File.ReadAllBytes(preference);
 
         Assert.AreEqual(recentRequest, store.LoadHistory().Single().RequestId);
-        store.Record(TaskRecord("failed"));
-        CollectionAssert.AreEqual(before, File.ReadAllBytes(historyPath), "Logging off must not rewrite existing history.");
+        var retained = JsonSerializer.Deserialize(File.ReadAllBytes(historyPath), AiHubJsonContext.Default.ListAiDiagnosticRecord)!;
+        Assert.AreEqual(recentRequest, retained.Single().RequestId, "Reading must physically remove expired records even while logging is off.");
+        byte[] afterRetention = File.ReadAllBytes(historyPath);
+        var whileOff = TaskRecord("failed");
+        store.Record(whileOff);
+        Assert.AreEqual(recentRequest, store.LoadHistory().Single().RequestId);
+        CollectionAssert.AreEqual(afterRetention, File.ReadAllBytes(historyPath), "Logging off must not append or rewrite the retained history.");
+        CollectionAssert.AreEqual(preferenceBefore, File.ReadAllBytes(preference), "Retention must not change the logging preference.");
+        Assert.IsFalse(store.GetSnapshot().PersistenceEnabled);
 
         SetLogLevel(fixture, "info");
         store.Record(TaskRecord("succeeded"));
-        Assert.AreEqual(2, store.LoadHistory().Count);
+        var enabledHistory = store.LoadHistory();
+        Assert.AreEqual(2, enabledHistory.Count);
+        Assert.IsFalse(enabledHistory.Any(record => record.RequestId == whileOff.RequestId), "Enabling logging must not backfill records observed while it was off.");
         Assert.IsFalse(File.ReadAllText(historyPath).Contains(oldRequest.ToString(), StringComparison.Ordinal));
         Assert.AreEqual(0L, store.GetSnapshot().PersistenceFailures);
     }

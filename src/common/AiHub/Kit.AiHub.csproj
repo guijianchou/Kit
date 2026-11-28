@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\default-security.md" />
+    <EmbeddedResource Include="Resources\windows-stability-report\AGENTS.md" LogicalName="Kit.AiHub.Resources.windows-stability-report.AGENTS.md" />
   </ItemGroup>
 
 </Project>

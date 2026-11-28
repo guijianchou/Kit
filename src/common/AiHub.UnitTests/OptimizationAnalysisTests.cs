@@ -164,12 +164,13 @@ public sealed class OptimizationAnalysisTests
 
         var result = await new OptimizationAnalysisService(engine).AnalyzeAsync(items, "zh-CN");
         Assert.IsTrue(result.IsSuccess);
-        Assert.AreEqual(6, engine.Inputs.Count, "31 distinct Temp extensions must collapse into 6 semantic buckets instead of fragmenting AI batches.");
+        Assert.AreEqual(3, engine.Inputs.Count, "Only known disposable Temp groups are actionable; source and unknown files share a protected group.");
         Assert.AreEqual(32, engine.Options!.BatchSize);
-        Assert.AreEqual(extensions.Length - 2, result.Items.Count);
-        Assert.AreEqual(2, result.SkippedCount);
-        Assert.IsTrue(items.Where(i => i.FileName.EndsWith(".docx", StringComparison.Ordinal) || i.FileName.EndsWith(".pem", StringComparison.Ordinal)).All(i => i.ReviewState == "skipped"));
-        Assert.IsTrue(items.Where(i => !i.FileName.EndsWith(".docx", StringComparison.Ordinal) && !i.FileName.EndsWith(".pem", StringComparison.Ordinal)).All(i => i.ReviewState == "approved"));
+        string[] allowed = [".log", ".dmp", ".tlog", ".pdb", ".obj", ".cache"];
+        Assert.AreEqual(allowed.Length, result.Items.Count);
+        Assert.AreEqual(extensions.Length - allowed.Length, result.SkippedCount);
+        Assert.IsTrue(items.Where(i => !allowed.Contains(System.IO.Path.GetExtension(i.FilePath))).All(i => i.ReviewState == "skipped"));
+        Assert.IsTrue(items.Where(i => allowed.Contains(System.IO.Path.GetExtension(i.FilePath))).All(i => i.ReviewState == "approved"));
     }
 
     [TestMethod]
@@ -476,6 +477,28 @@ public sealed class OptimizationAnalysisTests
         Assert.AreEqual(0, result.Items.Count);
         Assert.IsFalse(item.IsSelected);
         Assert.IsFalse(item.IsActionable);
+    }
+
+    [TestMethod]
+    [DataRow("code.cs")]
+    [DataRow("code.cpp")]
+    [DataRow("code.py")]
+    [DataRow("code.js")]
+    [DataRow("code.cs.tmp")]
+    [DataRow("unknown.xyz")]
+    public async Task AiCannotApproveUnknownOrSourceFilesFromGeneralTemp(string name)
+    {
+        using var engine = new FakeEngine();
+        engine.Edit = output => output.Recommendations[0].Action = "delete";
+        var candidate = Candidate("delete");
+        candidate.FilePath = @"C:\private\Temp\" + name;
+        candidate.FileName = name;
+        candidate.EvidenceKind = "temp-residual";
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([candidate], "en-US");
+        Assert.AreEqual("skip", engine.Inputs.Single().AllowedAction);
+        Assert.AreEqual(AiErrorCode.InvalidPayload, result.ErrorCode);
+        Assert.AreEqual(0, result.Items.Count);
+        Assert.IsFalse(candidate.IsActionable);
     }
 
     private static TempFileInfo Candidate(string action) => new()

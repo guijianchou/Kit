@@ -15,8 +15,8 @@ namespace Kit.Settings.UI.ViewModels;
 public sealed partial class AIHubPageViewModel
 {
     /// <summary>
-    /// Reconciles findings against the evidence actually reviewed. Only a complete,
-    /// scope-stable AI result may dismiss or downgrade a local interpretation.
+    /// Reconciles findings against the evidence actually reviewed. Complete AI reviews
+    /// may correct local interpretations, but cannot hide Critical or Error evidence.
     /// </summary>
     internal static List<AuditIssueEnhanced> MergeIssues(
         List<AuditIssueEnhanced> ruleIssues,
@@ -28,37 +28,15 @@ public sealed partial class AIHubPageViewModel
         var eventGroups = events.ToLookup(item => (item.EventId.ToString(CultureInfo.InvariantCulture), (item.LogName ?? string.Empty).ToUpperInvariant()));
         var ruleEvidence = ruleIssues.Distinct().ToDictionary(issue => issue, issue =>
             eventGroups[(issue.EventId, (issue.LogName ?? string.Empty).ToUpperInvariant())].Where(item => MatchesRule(item, issue)).ToArray());
-        var reviewedCounts = selected.GroupBy(item => item).ToDictionary(group => group.Key, group => group.Count());
-        var unreviewed = new List<SecurityEvent>();
-        foreach (var item in events)
-        {
-            if (replaceReviewedEvidence && reviewedCounts.TryGetValue(item, out int count) && count > 0)
-            {
-                reviewedCounts[item] = count - 1;
-            }
-            else
-            {
-                unreviewed.Add(item);
-            }
-        }
-        var merged = replaceReviewedEvidence ? AuditRuleEngine.Analyze(unreviewed) : new List<AuditIssueEnhanced>(ruleIssues);
-        if (replaceReviewedEvidence)
-        {
-            // Recollection may no longer contain an older channel or event. Its prior
-            // finding cannot be dismissed without seeing that evidence again.
-            merged.AddRange(ruleIssues.Where(issue => ruleEvidence[issue].Length == 0));
-        }
         var enhanced = new List<AuditIssueEnhanced>();
-        var references = aiIssues.Where(issue => issue is not null).SelectMany(issue => (issue.RelatedEventRefs ?? []).Append(issue.EventRef))
-            .Where(value => value is not null && value.StartsWith("item-", StringComparison.Ordinal))
-            .Select(value => int.TryParse(value.AsSpan(5), out int index) ? index - 1 : -1)
-            .Where(index => index >= 0 && index < selected.Count).Distinct().Select(index => selected[index])
-            .GroupBy(item => item).ToDictionary(group => group.Key, group => group.Count());
-        var enrichedRules = ruleEvidence.Where(entry => entry.Value.Length > 0 && entry.Value.GroupBy(item => item)
-            .All(group => references.TryGetValue(group.Key, out int count) && count >= group.Count())).Select(entry => entry.Key).ToHashSet();
-        foreach (var ai in AiHubAuditAnalysisService.DeduplicateIssues(aiIssues))
+        var coveredIndices = new HashSet<int>();
+        var validIssues = aiIssues.Where(issue => issue is not null && !string.IsNullOrWhiteSpace(issue.Title)
+            && ResolveAuditEvidenceReferences(issue, selected.Count) is not null)
+            .Select(issue => new AuditIssueEnhanced(issue) { RelatedEventRefs = issue.RelatedEventRefs?.ToList() ?? [] });
+        foreach (var ai in AiHubAuditAnalysisService.DeduplicateIssues(validIssues))
         {
-            if (ai is null || string.IsNullOrWhiteSpace(ai.Title))
+            var indices = ResolveAuditEvidenceReferences(ai, selected.Count);
+            if (indices is null)
             {
                 continue;
             }
@@ -66,16 +44,14 @@ public sealed partial class AIHubPageViewModel
             var finding = ToEnhanced(ai);
 
             // The reference identifies evidence; model-authored channel/event labels do not.
-            if (ai.EventRef.StartsWith("item-", StringComparison.Ordinal)
-                && int.TryParse(ai.EventRef.AsSpan(5), out int reference) && reference > 0 && reference <= selected.Count)
-            {
-                var origin = selected[reference - 1];
-                finding.LogName = origin.LogName ?? string.Empty;
-                finding.EventId = origin.EventId.ToString(CultureInfo.InvariantCulture);
-                finding.Source = origin.ProviderName ?? string.Empty;
-            }
-            var matchingRules = ruleIssues.Where(issue => issue.EventId == finding.EventId &&
-                string.Equals(issue.LogName, finding.LogName, StringComparison.OrdinalIgnoreCase)).ToList();
+            var origin = selected[indices[0]];
+            finding.LogName = origin.LogName ?? string.Empty;
+            finding.EventId = origin.EventId.ToString(CultureInfo.InvariantCulture);
+            finding.Source = origin.ProviderName ?? string.Empty;
+            var evidence = indices.Select(index => selected[index]).ToArray();
+            finding.ObservedEventLevel = AuditRiskPolicy.MostSevereLevel(evidence);
+            finding.Severity = AuditRiskPolicy.ApplySeverityFloor(finding.Severity, evidence);
+            var matchingRules = ruleIssues.Where(issue => evidence.Any(item => MatchesRule(item, issue))).ToList();
             if (!replaceReviewedEvidence && matchingRules.Any(issue => issue.IsHigh))
             {
                 finding.Severity = "High";
@@ -84,18 +60,75 @@ public sealed partial class AIHubPageViewModel
             {
                 finding.Severity = "Medium";
             }
-            if (!replaceReviewedEvidence)
-            {
-                // Partial findings enrich evidence but cannot eliminate unreviewed
-                // local observations sharing a channel and event ID.
-                merged.RemoveAll(issue => issue.EventId == finding.EventId &&
-                    string.Equals(issue.LogName, finding.LogName, StringComparison.OrdinalIgnoreCase)
-                    && enrichedRules.Contains(issue));
-            }
+            coveredIndices.UnionWith(indices);
             enhanced.Add(finding);
+        }
+
+        var references = coveredIndices.Select(index => selected[index]).GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+        List<AuditIssueEnhanced> merged;
+        if (replaceReviewedEvidence)
+        {
+            var reviewedCounts = selected.GroupBy(item => item).ToDictionary(group => group.Key, group => group.Count());
+            var retained = new List<SecurityEvent>();
+            foreach (var item in events)
+            {
+                bool reviewed = ConsumeEvidenceCount(reviewedCounts, item);
+                bool represented = reviewed && ConsumeEvidenceCount(references, item);
+
+                // A completed batch does not prove that the AI reported each observed
+                // failure. Rebuild only the remaining evidence so a partially cited
+                // group neither disappears nor duplicates its represented occurrences.
+                if (!reviewed || (AuditRiskPolicy.RequiresHighRisk(item) && !represented))
+                {
+                    retained.Add(item);
+                }
+            }
+            merged = AuditRuleEngine.Analyze(retained);
+
+            // A missing channel/event cannot be dismissed without seeing its evidence again.
+            merged.AddRange(ruleIssues.Where(issue => ruleEvidence[issue].Length == 0));
+        }
+        else
+        {
+            // Partial output still preserves whole local groups until every one of their
+            // exact observations has a validated reference, including repeated values.
+            var enrichedRules = ruleEvidence.Where(entry => entry.Value.Length > 0 && entry.Value.GroupBy(item => item)
+                .All(group => references.TryGetValue(group.Key, out int count) && count >= group.Count())).Select(entry => entry.Key).ToHashSet();
+            merged = ruleIssues.Where(issue => !enrichedRules.Contains(issue)).ToList();
         }
         merged.AddRange(enhanced);
         return merged;
+    }
+
+    private static bool ConsumeEvidenceCount(Dictionary<SecurityEvent, int> counts, SecurityEvent item)
+    {
+        if (!counts.TryGetValue(item, out int count) || count == 0)
+        {
+            return false;
+        }
+        counts[item] = count - 1;
+        return true;
+    }
+
+    private static int[] ResolveAuditEvidenceReferences(AuditIssue issue, int selectedCount)
+    {
+        var indices = new List<int>();
+        foreach (string reference in new[] { issue.EventRef }.Concat(issue.RelatedEventRefs ?? []))
+        {
+            if (reference is null || reference.Length != 11 || !reference.StartsWith("item-", StringComparison.Ordinal)
+                || !int.TryParse(reference.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int number)
+                || number <= 0 || number > selectedCount)
+            {
+                return null;
+            }
+            int index = number - 1;
+            if (!indices.Contains(index))
+            {
+                indices.Add(index);
+            }
+        }
+        return indices.ToArray();
     }
 
     private static bool MatchesRule(SecurityEvent item, AuditIssue issue) =>

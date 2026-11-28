@@ -109,7 +109,7 @@ public sealed class AuditAnalysisCacheTests
     [TestMethod]
     public void NewProviderRevisitsUnchangedNeighboursEvenWhenPreviousAnalysisFoundNothing()
     {
-        var time = new DateTime(2026, 11, 25, 8, 0, 0, DateTimeKind.Utc);
+        var time = DateTime.UtcNow.AddHours(-2);
         var cache = new AuditAnalysisCache();
         var first = cache.Prepare("policy", ["app", "far"], ["app", "network"], false, [time, time.AddHours(-1)]);
         cache.Commit(first, []);
@@ -128,7 +128,7 @@ public sealed class AuditAnalysisCacheTests
     [TestMethod]
     public void NeighbourRecheckDropsOldFindingWithoutExpandingTimeTransitively()
     {
-        var time = new DateTime(2026, 11, 25, 8, 0, 0, DateTimeKind.Utc);
+        var time = DateTime.UtcNow.AddHours(-2);
         var cache = new AuditAnalysisCache();
         var first = cache.Prepare("policy", ["app", "network"], ["app", "network"], false, [time.AddMinutes(4), time.AddMinutes(8)]);
         cache.Commit(first, [Finding("item-000001"), Finding("item-000002")]);
@@ -144,7 +144,7 @@ public sealed class AuditAnalysisCacheTests
     {
         using var fixture = new FixtureDirectory();
         string path = fixture.PathFor("cache.json");
-        var time = new DateTime(2026, 11, 25, 8, 0, 0, DateTimeKind.Utc);
+        var time = DateTime.UtcNow.AddHours(-2);
         var cache = new AuditAnalysisCache(path);
         var first = cache.Prepare("policy", ["disk", "app", "far"], ["disk", "app", "network"], false,
             [time, time.AddMinutes(1), time.AddHours(-1)]);
@@ -158,7 +158,7 @@ public sealed class AuditAnalysisCacheTests
     [TestMethod]
     public void ExplicitAffectedIdentifierRechecksRemoteFindingButNotSubstringLookalike()
     {
-        var time = new DateTime(2026, 11, 25, 8, 0, 0, DateTimeKind.Utc);
+        var time = DateTime.UtcNow.AddHours(-2);
         var cache = new AuditAnalysisCache();
         var first = cache.Prepare("policy", ["app", "other"], ["app", "other"], false, [time, time]);
         var issue = Finding("item-000001");
@@ -217,6 +217,105 @@ public sealed class AuditAnalysisCacheTests
         var next = new AuditAnalysisCache(path).Prepare("policy", ["hash"], ["system"], false);
         Assert.AreEqual(1, next.RequestedIndices.Length);
         Assert.AreEqual(0, next.ReusedIssues.Count);
+    }
+
+    [TestMethod]
+    public void MixedAgeCachePrunesExpiredEvidenceAndRemapsRecentNarrativeReferences()
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("cache.json");
+        var now = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        var cache = new AuditAnalysisCache(path, () => now);
+        var plan = cache.Prepare("policy", ["old", "recent", "other"], ["old-provider", "recent-provider", "other-provider"], false,
+            [now.AddDays(-31), now.AddHours(-3), now.AddHours(-1)]);
+        var recent = Finding("item-000002");
+        recent.Description = "Inspect item-000002 and item-000003.";
+        cache.Commit(plan, [Finding("item-000001"), recent], "primary-model", "main");
+
+        var stored = JsonSerializer.Deserialize(File.ReadAllText(path), AIHubLibJsonContext.Default.AuditAnalysisSnapshot)!;
+        CollectionAssert.AreEqual(new[] { "recent:0", "other:0" }, stored.Identities);
+        Assert.AreEqual("Inspect item-000001 and item-000002.", stored.Issues.Single().Description);
+        Assert.IsFalse(File.ReadAllText(path).Contains("old-provider", StringComparison.Ordinal));
+        var same = new AuditAnalysisCache(path, () => now).Prepare("policy", ["recent", "other"], ["recent-provider", "other-provider"], false,
+            [now.AddHours(-3), now.AddHours(-1)]);
+        Assert.AreEqual(0, same.RequestedIndices.Length);
+        Assert.AreEqual("primary-model", same.UsedModel);
+        Assert.AreEqual(1, same.ReusedIssues.Count);
+    }
+
+    [TestMethod]
+    public void ExpiredCrossProviderEvidenceRechecksOnlyItsConnectedRecentContexts()
+    {
+        var now = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        var cache = new AuditAnalysisCache(utcNow: () => now);
+        var plan = cache.Prepare("policy", ["old", "linked", "unrelated"], ["old-provider", "linked-provider", "other-provider"], false,
+            [now.AddDays(-31), now.AddHours(-3), now.AddHours(-1)]);
+        var chain = Finding("item-000002");
+        chain.Description = "item-000001 supports item-000002";
+        cache.Commit(plan, [chain, Finding("item-000003")]);
+        var next = cache.Prepare("policy", ["linked", "unrelated"], ["linked-provider", "other-provider"], false,
+            [now.AddHours(-3), now.AddHours(-1)]);
+        CollectionAssert.AreEqual(new[] { 0 }, next.RequestedIndices);
+        Assert.AreEqual("item-000002", next.ReusedIssues.Single().EventRef);
+    }
+
+    [TestMethod]
+    public void InProcessRetentionExpiresEventsAndDoesNotRefreshUnknownEvidenceAge()
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("cache.json");
+        var now = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        var cache = new AuditAnalysisCache(path, () => now);
+        var initial = cache.Prepare("policy", ["unknown", "recent"], ["unknown", "recent"], false, [null, now]);
+        cache.Commit(initial, [Finding("item-000001"), Finding("item-000002")]);
+        now = now.AddDays(29);
+        var incremental = cache.Prepare("policy", ["unknown", "recent", "new"], ["unknown", "recent", "new"], false, [null, now.AddDays(-29), now]);
+        CollectionAssert.AreEqual(new[] { 2 }, incremental.RequestedIndices);
+        cache.Commit(incremental, incremental.ReusedIssues.Append(Finding("item-000003")).ToArray());
+        now = now.AddDays(2);
+        var expired = cache.Prepare("policy", ["new"], ["new"], false, [now.AddDays(-2)]);
+        Assert.AreEqual(0, expired.RequestedIndices.Length, "Unrelated recent evidence must remain cached in the same running process.");
+        Assert.AreEqual("item-000001", expired.ReusedIssues.Single().EventRef);
+        var stored = JsonSerializer.Deserialize(File.ReadAllText(path), AIHubLibJsonContext.Default.AuditAnalysisSnapshot)!;
+        CollectionAssert.AreEqual(new[] { "new:0" }, stored.Identities, "A later cache write must not extend the lifetime of unknown-time evidence.");
+    }
+
+    [TestMethod]
+    public void LegacyUnknownTimesUseFileAgeAndEntirelyExpiredCommitsLeaveNoCache()
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("cache.json");
+        var now = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        File.WriteAllText(path, JsonSerializer.Serialize(new AuditAnalysisSnapshot(3, "policy", ["unknown:0"], ["provider"], [Finding("item-000001")], [null]), AIHubLibJsonContext.Default.AuditAnalysisSnapshot));
+        File.SetLastWriteTimeUtc(path, now.AddDays(-31));
+        var cache = new AuditAnalysisCache(path, () => now);
+        var next = cache.Prepare("policy", ["unknown"], ["provider"], false);
+        Assert.AreEqual(1, next.RequestedIndices.Length);
+        Assert.AreEqual(0, next.ReusedIssues.Count);
+        Assert.IsFalse(File.Exists(path));
+
+        var old = cache.Prepare("policy", ["old"], ["old-provider"], false, [now.AddDays(-40)]);
+        cache.Commit(old, [Finding("item-000001")]);
+        Assert.IsFalse(File.Exists(path), "Saving an old scan must not reintroduce expired analysis records.");
+    }
+
+    [TestMethod]
+    public void CrossingTheCutoffRechecksTheAffectedProviderWithoutDiscardingOtherRecentProviders()
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("cache.json");
+        var now = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        DateTime boundary = now.AddDays(-30);
+        var cache = new AuditAnalysisCache(path, () => now);
+        var initial = cache.Prepare("policy", ["boundary", "same-provider", "other"], ["app", "app", "other"], false,
+            [boundary, now.AddHours(-1), now]);
+        cache.Commit(initial, [Finding("item-000002"), Finding("item-000003")]);
+        Assert.AreEqual(0, cache.Prepare("policy", ["boundary", "same-provider", "other"], ["app", "app", "other"], false,
+            [boundary, now.AddHours(-1), now]).RequestedIndices.Length, "The exact thirty-day boundary remains inside retention.");
+        now = now.AddTicks(1);
+        var next = cache.Prepare("policy", ["same-provider", "other"], ["app", "other"], false, [now.AddHours(-1), now]);
+        CollectionAssert.AreEqual(new[] { 0 }, next.RequestedIndices, "Removing a prior observation invalidates its provider's conclusion, including no-finding evidence.");
+        Assert.AreEqual("item-000002", next.ReusedIssues.Single().EventRef);
     }
 
     private static AuditIssue Finding(string reference) => new()

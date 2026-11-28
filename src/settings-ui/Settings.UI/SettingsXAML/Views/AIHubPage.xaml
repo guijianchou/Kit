@@ -580,9 +580,9 @@
                         </VisualState.StateTriggers>
                         <VisualState.Setters>
                             <Setter Target="AiReadinessModelInfo.Visibility" Value="Collapsed" />
-                            <Setter Target="AIHubRoot.RowSpacing" Value="6" />
+                            <Setter Target="AIHubRoot.RowSpacing" Value="4" />
                             <Setter Target="AiHubPageHeader.RowSpacing" Value="4" />
-                            <Setter Target="AiHubFixedHeaderStack.Spacing" Value="6" />
+                            <Setter Target="AiHubFixedHeaderStack.Spacing" Value="4" />
                             <Setter Target="AiHubEnableSettingsCard.Padding" Value="12,4" />
                             <Setter Target="AiHubEnableSettingsCard.MinHeight" Value="44" />
                             <Setter Target="AiHubMasterCardSurface.Padding" Value="12,4" />
@@ -923,7 +923,7 @@
                                 <StackPanel Spacing="20">
                                     <Grid x:Name="AuditCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
                                         <tkcontrols:WrapPanel x:Name="AuditPrimaryCommands" HorizontalSpacing="10" VerticalSpacing="10" VerticalAlignment="Center">
-                                            <SplitButton x:Name="AuditScanButton" Click="OnSelectedScanClick" IsEnabledChanged="OnScanButtonIsEnabledChanged" IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
+                                            <SplitButton x:Name="AuditScanButton" Click="OnSelectedScanClick" Loaded="OnScanButtonLoaded" IsEnabledChanged="OnScanButtonIsEnabledChanged" IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
                                                 ToolTipService.ToolTip="{x:Bind ViewModel.SelectedScanHint, Mode=OneWay}"
                                                 Background="{ThemeResource SplitButtonBackground}"
                                                 Foreground="{ThemeResource SplitButtonForeground}"
@@ -1022,6 +1022,8 @@
                                                     <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontWeight="Medium" />
                                                 </StackPanel>
                                             </Button>
+                                            <Button x:Uid="AIHub_WeeklyReport" services:RuntimeLocalization.Uid="AIHub_WeeklyReport" Click="OnWeeklyReportClick"
+                                                    AutomationProperties.AutomationId="AIHub_WeeklyReportButton" Style="{StaticResource KitActionButtonStyle}" />
                                         </tkcontrols:WrapPanel>
                                         <DropDownButton x:Name="AuditHistoryDropDown" Grid.Column="1"
                                             IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
@@ -1039,8 +1041,6 @@
                                                     <StackPanel Spacing="12">
                                                         <CalendarDatePicker x:Uid="AIHub_AuditDatePicker" services:RuntimeLocalization.Uid="AIHub_AuditDatePicker" Date="{x:Bind ViewModel.SelectedAuditDate, Mode=OneWay}" MaxDate="{x:Bind ViewModel.LatestSelectableAuditDate}" DateChanged="OnAuditDateChanged" />
                                                         <Button Content="{x:Bind ViewModel.LatestAuditLabel}" Command="{x:Bind ViewModel.SelectLatestCommand}" AutomationProperties.AutomationId="AIHub_SelectLatestButton" />
-                                                        <Button x:Uid="AIHub_WeeklyReport" services:RuntimeLocalization.Uid="AIHub_WeeklyReport" Click="OnWeeklyReportClick" AutomationProperties.AutomationId="AIHub_WeeklyReportButton" />
-                                                        <Button Content="{x:Bind ViewModel.MonthlyReportLabel, Mode=OneWay}" Click="OnMonthlyReportClick" AutomationProperties.AutomationId="AIHub_MonthlyReportButton" />
                                                     </StackPanel>
                                                 </Flyout>
                                             </DropDownButton.Flyout>
@@ -2124,6 +2124,7 @@
                                         HorizontalAlignment="Left">
                                         <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_SecurityAudit" services:RuntimeLocalization.Uid="AIHub_Segment_SecurityAudit" Content="Security audit" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
                                         <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_Optimization" services:RuntimeLocalization.Uid="AIHub_Segment_Optimization" Content="Optimization" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
+                                        <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_WeeklyReport" services:RuntimeLocalization.Uid="AIHub_Segment_WeeklyReport" Content="Weekly report" Icon="{ui:FontIcon Glyph=&#xE9F9;}" />
                                     </tkcontrols:Segmented>
                                 </StackPanel>
                             </Border>

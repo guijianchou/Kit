@@ -658,20 +658,35 @@ public sealed class WingetServiceTests
             await client.InstallStarted.Task.WaitAsync(TimeSpan.FromSeconds(3));
             Assert.IsNull(runtime.GetStatus().Output);
             string progressOutput = "prefix😀" + new string('p', (16 * 1024) - 1);
-            client.ProgressSink!.Report(new("WaitingForInstaller", null) { Output = progressOutput });
+            client.ProgressSink!.Report(new("Downloading", 25, 1024, 4096) { Output = progressOutput });
             Assert.AreEqual(new string('p', (16 * 1024) - 1), runtime.GetStatus().Output, "Truncation must not leave an isolated low surrogate.");
+            Assert.AreEqual(1024UL, runtime.GetStatus().BytesDownloaded);
+            Assert.AreEqual(4096UL, runtime.GetStatus().BytesRequired);
+            client.ProgressSink.Report(new("Installing", null));
+            Assert.IsNull(runtime.GetStatus().BytesDownloaded, "Download quantities must clear when the native installer starts.");
+            Assert.IsNull(runtime.GetStatus().BytesRequired);
+            Assert.IsNull(runtime.GetStatus().ProgressPercent);
+            client.ProgressSink.Report(new("Downloading", 50, 2048, 4096));
             await runtime.HandleRequestAsync(Envelope("cancel", new() { OperationId = ack.OperationId }), CancellationToken.None);
-            client.ProgressSink.Report(new("WaitingForInstaller", null) { Output = "native installer still running" });
+            client.ProgressSink.Report(new("Installing", 90) { Output = "native installer still running" });
             Assert.AreEqual("Cancelling", runtime.GetStatus().Phase);
+            Assert.AreEqual(50.0, runtime.GetStatus().ProgressPercent);
+            Assert.AreEqual(2048UL, runtime.GetStatus().BytesDownloaded);
+            Assert.AreEqual(4096UL, runtime.GetStatus().BytesRequired);
             Assert.AreEqual("native installer still running", runtime.GetStatus().Output, "Output continues while cancellation waits for native exit.");
             client.InstallRelease.TrySetResult();
             await WaitIdleAsync(runtime);
             Assert.AreEqual(finalOutput[^16384..], runtime.GetStatus().Output);
             Assert.AreEqual(runtime.GetStatus().Output, runtime.GetStatus().LastResult!.Install!.Output);
+            Assert.IsNull(runtime.GetStatus().ProgressPercent);
+            Assert.IsNull(runtime.GetStatus().BytesDownloaded);
+            Assert.IsNull(runtime.GetStatus().BytesRequired);
             client.ProgressSink.Report(new("WaitingForInstaller", null) { Output = "late output" });
             Assert.AreEqual(finalOutput[^16384..], runtime.GetStatus().Output, "Completed operations must ignore delayed progress.");
             await runtime.HandleRequestAsync(Envelope("search", new() { Query = "Example" }), CancellationToken.None);
             Assert.IsNull(runtime.GetStatus().Output);
+            Assert.IsNull(runtime.GetStatus().BytesDownloaded);
+            Assert.IsNull(runtime.GetStatus().BytesRequired);
             await WaitIdleAsync(runtime);
         }
         finally

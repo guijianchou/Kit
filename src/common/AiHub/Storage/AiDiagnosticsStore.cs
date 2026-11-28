@@ -24,7 +24,7 @@ public sealed class AiDiagnosticsStore
     public const int HistoryRetentionDays = 30;
     private const string FileName = "diagnostics.json";
     private static readonly string[] KnownPlugins = ["aihub", "netmap", "udptest", "winget", "awake", "lightswitch", "localserver"];
-    private static readonly string[] KnownTasks = ["self-test", "security-audit", "system-optimization", "route-analysis"];
+    private static readonly string[] KnownTasks = ["self-test", "security-audit", "system-optimization", "route-analysis", "windows-stability-report"];
     private static readonly string[] KnownReasons =
     [
         "None", "NativeRetryRecovered", "InvalidConfiguration", "UnsupportedNativeConfiguration",
@@ -192,12 +192,12 @@ public sealed class AiDiagnosticsStore
 
     /// <summary>
     /// Returns newest records first within the retention period. History is separate from
-    /// current-session totals; expired disk records are reclaimed on the next enabled write.
+    /// current-session totals; expired disk records are reclaimed while reading or writing.
     /// </summary>
     public IReadOnlyList<AiDiagnosticRecord> LoadHistory()
     {
         IReadOnlyList<AiDiagnosticRecord> result = Array.Empty<AiDiagnosticRecord>();
-        WithHistoryLock(() => result = ReadHistoryCore().AsEnumerable().Reverse().ToArray());
+        WithHistoryLock(() => result = ReadHistoryCore(reclaimExpired: true).AsEnumerable().Reverse().ToArray());
         return result;
     }
 
@@ -284,7 +284,7 @@ public sealed class AiDiagnosticsStore
         }
     }
 
-    private List<AiDiagnosticRecord> ReadHistoryCore()
+    private List<AiDiagnosticRecord> ReadHistoryCore(bool reclaimExpired = false)
     {
         try
         {
@@ -296,8 +296,14 @@ public sealed class AiDiagnosticsStore
 
             List<AiDiagnosticRecord>? records = JsonSerializer.Deserialize(content, AiHubJsonContext.Default.ListAiDiagnosticRecord);
             DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-HistoryRetentionDays);
-            return records?.Where(record => record is not null && record.TimestampUtc >= cutoff)
+            var retained = records?.Where(record => record is not null && record.TimestampUtc >= cutoff)
                 .OrderBy(record => record.TimestampUtc).TakeLast(MaximumHistoryRecords).Select(Normalize).ToList() ?? [];
+            if (reclaimExpired && records?.Any(record => record is not null && record.TimestampUtc < cutoff) == true)
+            {
+                WriteHistory(SerializeHistory(retained));
+            }
+
+            return retained;
         }
         catch (Exception)
         {

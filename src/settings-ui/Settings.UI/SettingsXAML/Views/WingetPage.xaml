@@ -710,12 +710,21 @@
                                             <Button x:Name="OperationCancelButton" x:Uid="Winget_Cancel" services:RuntimeLocalization.Uid="Winget_Cancel" Click="Cancel_Click" VerticalAlignment="Center" IsEnabled="{x:Bind ViewModel.CanCancelOperation, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                         </StackPanel>
                                     </Grid>
-                                    <ProgressBar
-                                        Grid.Row="1"
-                                        Style="{StaticResource KitProgressBarStyle}"
-                                        Value="{x:Bind ViewModel.Progress, Mode=OneWay}"
-                                        IsIndeterminate="{x:Bind ViewModel.IsProgressIndeterminate, Mode=OneWay}"
-                                        Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <StackPanel Grid.Row="1" Spacing="6" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ProgressBar
+                                            x:Name="OperationProgressBar"
+                                            Style="{StaticResource KitProgressBarStyle}"
+                                            Value="{x:Bind ViewModel.Progress, Mode=OneWay}"
+                                            IsIndeterminate="{x:Bind ViewModel.IsProgressIndeterminate, Mode=OneWay}"
+                                            AutomationProperties.Name="{x:Bind ViewModel.OperationText, Mode=OneWay}"
+                                            AutomationProperties.AutomationId="Winget_OperationProgress" />
+                                        <TextBlock x:Name="OperationProgressText"
+                                            Text="{x:Bind ViewModel.OperationProgressText, Mode=OneWay}"
+                                            FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                            Visibility="{x:Bind ViewModel.HasOperationProgressText, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            AutomationProperties.AutomationId="Winget_OperationProgressText" />
+                                    </StackPanel>
                                     <Expander x:Name="OperationDetailsExpander" Grid.Row="2" x:Uid="Winget_OperationDetails" services:RuntimeLocalization.Uid="Winget_OperationDetails" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
                                         <ScrollViewer MaxHeight="180" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
                                             <StackPanel Spacing="8">

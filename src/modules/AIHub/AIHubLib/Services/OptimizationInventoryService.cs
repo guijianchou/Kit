@@ -354,6 +354,9 @@ public sealed class OptimizationInventoryService
 
         yield return At("temporary", "system", "Temporary files", "临时文件", temp, "analysis-only");
         yield return At("local-temporary", "system", "Local temporary files", "用户临时文件", Path.Combine(local, "Temp"), "analysis-only");
+        yield return At("temporary-internet", "browsers", "Temporary Internet files", "Internet 临时文件", Path.Combine(local, "Microsoft", "Windows", "INetCache", "IE"));
+        yield return At("ccache-compiler", "development", "ccache compiler cache", "ccache 编译缓存", Path.Combine(local, "ccache"));
+        yield return At("sccache-compiler", "development", "sccache compiler cache", "sccache 编译缓存", Path.Combine(local, "Mozilla", "sccache"));
         foreach (var entry in new[]
         {
             ("crash-dumps", "Crash dumps", "应用崩溃转储", "CrashDumps"),

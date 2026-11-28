@@ -155,6 +155,56 @@ public sealed partial class WingetViewModel
 
     public bool HasOperationOutput => !string.IsNullOrWhiteSpace(OperationOutput);
 
+    public string OperationProgressText
+    {
+        get
+        {
+            if (!IsBusy)
+            {
+                return string.Empty;
+            }
+
+            string percentage = IsProgressIndeterminate ? string.Empty : Progress.ToString("0.#", CultureInfo.CurrentCulture) + "%";
+            if (status.Phase == "Downloading" && status.BytesDownloaded is ulong downloaded)
+            {
+                string size = status.BytesRequired is > 0
+                    ? FormatProgressBytes(downloaded) + " / " + FormatProgressBytes(status.BytesRequired.Value)
+                    : string.Format(CultureInfo.CurrentCulture, L("DownloadedSizeUnknownTotal"), FormatProgressBytes(downloaded));
+                return string.IsNullOrEmpty(percentage) ? size : percentage + " · " + size;
+            }
+
+            if (!string.IsNullOrEmpty(percentage))
+            {
+                return percentage;
+            }
+
+            return status.Phase switch
+            {
+                "Downloading" => L("DownloadProgressPending"),
+                "Installing" or "Uninstalling" => L("InstallerProgressUnavailable"),
+                "Starting" or "RunningWinGet" => L("OperationProgressPending"),
+                "WaitingForInstaller" => L("InstallerProgressUnavailable"),
+                _ => string.Empty,
+            };
+        }
+    }
+
+    public bool HasOperationProgressText => !string.IsNullOrWhiteSpace(OperationProgressText);
+
+    private static string FormatProgressBytes(ulong bytes)
+    {
+        string[] units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+        double size = bytes;
+        int unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        return size.ToString(unit == 0 ? "0" : "0.#", CultureInfo.CurrentCulture) + " " + units[unit];
+    }
+
     private WingetQueueItem? LatestOperationItem => status.Queue.Count > 0 ? status.Queue[^1] : status.History.Count > 0 ? status.History[0] : null;
 
     private void NotifyState()
@@ -231,6 +281,8 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(NextCheckText), NextCheckText);
         PublishValue(nameof(Progress), Progress);
         PublishValue(nameof(IsProgressIndeterminate), IsProgressIndeterminate);
+        PublishValue(nameof(OperationProgressText), OperationProgressText);
+        PublishValue(nameof(HasOperationProgressText), HasOperationProgressText);
         PublishValue(nameof(OperationText), OperationText);
         PublishValue(nameof(HasOperationFeedback), HasOperationFeedback);
         PublishValue(nameof(ShowOperationCard), ShowOperationCard);

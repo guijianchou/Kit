@@ -547,15 +547,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     internal Task<WeeklyAuditReport> LoadWeeklyReportAsync() => _auditHistoryStorage.LoadWeeklyReportAsync(
         DateOnly.FromDateTime(SelectedAuditDate?.Date ?? DateTime.Today), TimeZoneInfo.Local);
 
-    internal async Task<AuditPeriodReport> LoadPeriodReportAsync(bool monthly)
-    {
-        var date = DateOnly.FromDateTime(SelectedAuditDate?.Date ?? DateTime.Today);
-        await _auditHistoryWriteTask;
-        return await _auditHistoryStorage.LoadPeriodReportAsync(date, TimeZoneInfo.Local, monthly);
-    }
-
-    public string MonthlyReportLabel => PreferChinese() ? "审计月报" : "Monthly audit report";
-
     public int HighCount
     {
         get => _highCount;
@@ -844,8 +835,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     public string RecoverableCleanupTitle => "AIHub_RecoverableCleanupTitle".GetLocalizedOrFallback("Reviewed snapshot only");
     public string RecoverableCleanupDescription => "AIHub_RecoverableCleanupDescription".GetLocalizedOrFallback("Scope, age and changes are rechecked per file before deletion; new, changed, locked or inaccessible files are skipped.");
 
-    public AuditIssueEnhanced AuditPriorityFinding => AllIssues.OrderByDescending(issue => issue.IsHigh)
-        .ThenByDescending(issue => issue.IsMedium).ThenByDescending(issue => issue.Occurrences).FirstOrDefault();
+    public AuditIssueEnhanced AuditPriorityFinding => AuditRiskPolicy.OrderFindings(AllIssues).FirstOrDefault();
     public bool HasAuditPriority => AuditPriorityFinding != null;
     public string PriorityCalloutBadgeText => "AIHub_PriorityCalloutBadgeText".GetLocalizedOrFallback("Review first");
     public string AuditPriorityTitle => AuditPriorityFinding?.DisplayTitle ?? string.Empty;
@@ -1141,7 +1131,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     public string TaskPolicyTitle => "AIHub_TaskPolicyTitle".GetLocalizedOrFallback("Task instructions");
 
     /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
-    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize instructions for audits and optimization. Global safety rules are in AI service settings.");
+    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize independent instructions for audits, optimization and weekly reports. Global safety rules are in AI service settings.");
 
     /// <summary>Label for the manual readiness re-check action.</summary>
     public string RecheckAiLabel => IsCheckingAiReadiness
@@ -2803,6 +2793,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
             _auditCts?.Cancel();
             _auditCts?.Dispose();
             _auditEvidenceSession.Dispose();
+            _weeklyReportService?.Dispose();
             _optimizationCts?.Cancel();
             _optimizationCts?.Dispose();
         }

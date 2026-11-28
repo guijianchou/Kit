@@ -3104,7 +3104,7 @@
     <value>任务指令</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
+    <value>分别设置安全审计、系统优化和周报的独立 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>正在检测…</value>
@@ -3320,22 +3320,22 @@
     <value>扫描失败</value>
   </data>
   <data name="AIHub_HealthVerdict_Critical" xml:space="preserve">
-    <value>需要关注 · 存在高危异常</value>
+    <value>需要关注 · 存在高风险问题</value>
   </data>
   <data name="AIHub_HealthSummary_CriticalFormat" xml:space="preserve">
-    <value>检测到 {0} 项高危故障及 {1} 项警告。建议优先执行推荐的操作建议进行修复。</value>
+    <value>记录到 {0} 项高风险及 {1} 项中风险问题。请核实证据，并优先处理推荐的操作建议。</value>
   </data>
   <data name="AIHub_HealthVerdict_Good" xml:space="preserve">
-    <value>良好 · 多数指标平稳</value>
+    <value>需要核查 · 仍有中风险问题</value>
   </data>
   <data name="AIHub_HealthSummary_GoodFormat" xml:space="preserve">
-    <value>未检测到严重故障，记录了 {0} 项常规警告与 {1} 项系统信息日志。已生成相应操作建议。</value>
+    <value>记录了 {0} 项中风险及 {1} 项低风险问题，请核对证据并验证实际影响。</value>
   </data>
   <data name="AIHub_HealthVerdict_Excellent" xml:space="preserve">
-    <value>优秀 · 系统健康稳定</value>
+    <value>本次扫描未发现高、中风险问题</value>
   </data>
   <data name="AIHub_HealthSummary_Excellent" xml:space="preserve">
-    <value>最近扫描时段内未发现任何安全违规或稳定性异常，所有日志指标正常。</value>
+    <value>本结论仅适用于已采集证据；请同时查看低风险问题和采集覆盖范围。</value>
   </data>
   <data name="AIHub_ScanType_Historical" xml:space="preserve">
     <value>历史审计快照</value>
@@ -3596,8 +3596,13 @@
     <value>正在读取软件详情…</value>
   </data>
   <data name="Winget_Phase_Downloading" xml:space="preserve">
-    <value>正在下载并校验…</value>
+    <value>正在下载…</value>
   </data>
+  <data name="Winget_Phase_Verifying" xml:space="preserve"><value>正在校验下载文件…</value></data>
+  <data name="Winget_DownloadProgressPending" xml:space="preserve"><value>正在等待 WinGet 返回下载大小…</value></data>
+  <data name="Winget_DownloadedSizeUnknownTotal" xml:space="preserve"><value>已下载 {0} · 总大小未知</value></data>
+  <data name="Winget_InstallerProgressUnavailable" xml:space="preserve"><value>暂未返回百分比。如出现安装窗口或 Windows 权限提示，请按提示继续。</value></data>
+  <data name="Winget_OperationProgressPending" xml:space="preserve"><value>正在准备操作，下载和安装进度将在此显示。</value></data>
   <data name="Winget_Phase_Installing" xml:space="preserve">
     <value>正在安装软件…</value>
   </data>
@@ -4209,7 +4214,7 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AiHub_ConfigurationLoading.AutomationProperties.Name" xml:space="preserve">
     <value>正在加载 AI 服务设置</value>
   </data>
-  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>审计周报</value></data>
+  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>稳定性周报</value></data>
   <data name="AIHub_WeeklyLoading" xml:space="preserve"><value>正在读取审计历史…</value></data>
   <data name="AIHub_Inventory_Growth" xml:space="preserve"><value>比上次扫描增加 {0}</value></data>
   <data name="AIHub_Inventory_Shrink" xml:space="preserve"><value>比上次扫描减少 {0}</value></data>
@@ -4515,5 +4520,14 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   </data>
   <data name="AIHub_AuditElapsed_UnderSecond" xml:space="preserve">
     <value>不足 1 秒</value>
+  </data>
+  <data name="AIHub_Segment_WeeklyReport.Content" xml:space="preserve">
+    <value>周报</value>
+  </data>
+  <data name="AIHub_WeeklyPolicyHeading" xml:space="preserve">
+    <value>周报分析指令</value>
+  </data>
+  <data name="AIHub_WeeklyPolicyDescription" xml:space="preserve">
+    <value>评估七天稳定性证据，区分已有扫描参考与新采集观察，给出有依据的处置及验收步骤。</value>
   </data>
 </root>

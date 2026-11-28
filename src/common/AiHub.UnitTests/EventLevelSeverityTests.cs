@@ -24,8 +24,7 @@ public sealed class EventLevelSeverityTests
     [TestMethod]
     public void LevelOneCriticalOutranksError()
     {
-        // Level 1 is Critical and Level 2 is Error in Windows. If both land on the same tier
-        // the dashboard cannot distinguish a crash from a recoverable error.
+        // Both levels have a High floor; the original level still prioritizes Critical.
         var issues = AuditRuleEngine.Analyze(new List<SecurityEvent> { Ev(9999, "UnknownProvider", 1) });
 
         Assert.AreEqual(1, issues.Count);
@@ -94,13 +93,62 @@ public sealed class EventLevelSeverityTests
     }
 
     [TestMethod]
-    public void ErrorEventIsNotDowngradedToLow()
+    public void ErrorEventHasHighRiskFloor()
     {
-        // Event 1000 is a real crash; the rule marks it Medium, which is acceptable, but the
-        // level must stop it from ever falling to Low.
+        // Event-specific interpretation cannot lower Windows Error below High.
         var issues = AuditRuleEngine.Analyze(new List<SecurityEvent> { Ev(1000, "Application Error", 2) });
 
-        Assert.IsFalse(issues[0].IsLow, "Error-level events must not be reported as Low.");
+        Assert.IsTrue(issues[0].IsHigh, "Error-level events must be High risk.");
+        Assert.AreEqual(2, issues[0].ObservedEventLevel);
+    }
+
+    [TestMethod]
+    public void MixedLevelGroupUsesItsMostSevereRecordRegardlessOfOrder()
+    {
+        SecurityEvent[] events = [Ev(10016, "Microsoft-Windows-DistributedCOM", 3), Ev(10016, "Microsoft-Windows-DistributedCOM", 2)];
+        foreach (var ordered in new[] { events, events.Reverse().ToArray() })
+        {
+            var issue = AuditRuleEngine.Analyze(ordered).Single();
+            Assert.IsTrue(issue.IsHigh);
+            Assert.AreEqual(2, issue.ObservedEventLevel);
+            Assert.AreEqual(2, issue.Occurrences);
+        }
+    }
+
+    [TestMethod]
+    public void CriticalObservationPrecedesFrequentErrorFindings()
+    {
+        var events = Enumerable.Range(0, 30).Select(_ => Ev(1000, "Application Error", 2)).Append(Ev(41, "Microsoft-Windows-Kernel-Power", 1)).ToArray();
+        var issues = AuditRuleEngine.Analyze(events);
+        Assert.IsTrue(issues.All(issue => issue.IsHigh));
+        Assert.AreEqual("41", issues[0].EventId);
+        Assert.AreEqual(1, issues[0].ObservedEventLevel);
+    }
+
+    [TestMethod]
+    public void CategorySummariesPrioritizeCriticalWithinAndAcrossCategories()
+    {
+        AuditIssueEnhanced[] issues =
+        [
+            new() { Key = "error", Category = "System", Severity = "High", ObservedEventLevel = 2, Occurrences = 30 },
+            new() { Key = "shutdown", Category = "System", Severity = "High", ObservedEventLevel = 1, Occurrences = 1 },
+            new() { Key = "crashes", Category = "Application", Severity = "High", ObservedEventLevel = 2, Occurrences = 100 },
+            new() { Key = "hangs", Category = "Application", Severity = "High", ObservedEventLevel = 2, Occurrences = 100 },
+            new() { Key = "service", Category = "Application", Severity = "High", ObservedEventLevel = 2, Occurrences = 100 },
+        ];
+        var summary = AuditSummary.From(issues);
+        Assert.AreEqual("System", summary.Categories[0].Category);
+        Assert.AreEqual("shutdown", summary.Categories[0].Priority.Key);
+        Assert.AreEqual(5, summary.High);
+    }
+
+    [TestMethod]
+    public void UnknownAndMissingLevelsDoNotInventAnObservedFailure()
+    {
+        SecurityEvent[] events = [Ev(9999, "UnknownProvider", 0), Ev(9999, "UnknownProvider", 6)];
+        Assert.IsNull(AuditRiskPolicy.MostSevereLevel(events));
+        Assert.IsNull(AuditRiskPolicy.MostSevereLevel([]));
+        Assert.AreEqual("Low", AuditRiskPolicy.ApplySeverityFloor("Low", events));
     }
 
     [TestMethod]

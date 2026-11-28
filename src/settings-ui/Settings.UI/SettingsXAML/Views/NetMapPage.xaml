@@ -116,6 +116,7 @@
                     <SolidColorBrush x:Key="NetMapDetailsSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
+            <x:Double x:Key="NetMapRouteSurfaceHeight">270</x:Double>
 
             <ResourceDictionary x:Key="NetMapHealthStyles">
                 <Style x:Key="UnknownText" TargetType="TextBlock">
@@ -729,13 +730,15 @@
 
                                         <!-- Left: World Map Canvas inside Mica-Harmonized Translucent Ocean Surface -->
                                         <Border
+                                            x:Name="MapSurface"
+                                            Height="{StaticResource NetMapRouteSurfaceHeight}"
                                             Padding="0"
                                             Background="{ThemeResource NetMapOceanBrush}"
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                             BorderThickness="1"
                                             CornerRadius="{StaticResource OverlayCornerRadius}">
                                             <Grid>
-                                                <Grid x:Name="MapView" Height="268" SizeChanged="MapView_SizeChanged" Background="Transparent" AutomationProperties.AccessibilityView="Raw"
+                                                <Grid x:Name="MapView" SizeChanged="MapView_SizeChanged" Background="Transparent" AutomationProperties.AccessibilityView="Raw"
                                                       PointerPressed="MapView_PointerPressed" PointerMoved="MapView_PointerMoved" PointerReleased="MapView_PointerReleased"
                                                       PointerCaptureLost="MapView_PointerCaptureLost" PointerWheelChanged="MapView_PointerWheelChanged">
                                                     <Grid.Clip><RectangleGeometry x:Name="MapViewportClip" /></Grid.Clip>
@@ -812,11 +815,12 @@
                                         </Border>
 
                                         <!-- Right: Hop Route Matrix inside Recessed Surface -->
-                                        <StackPanel x:Name="RoutePanel" Grid.Column="1" Spacing="6">
-                                            <Border Padding="0" Style="{StaticResource KitRecessedSurfaceStyle}">
-                                                <StackPanel Spacing="0">
+                                        <Grid x:Name="RoutePanel" Grid.Column="1" Height="{StaticResource NetMapRouteSurfaceHeight}">
+                                            <Border x:Name="RouteSurface" Padding="0" Style="{StaticResource KitRecessedSurfaceStyle}">
+                                                <Grid RowDefinitions="Auto,*">
                                                     <!-- Table Header -->
                                                     <Border
+                                                        x:Name="RouteTableHeader"
                                                         Padding="10,6"
                                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                         BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
@@ -833,11 +837,10 @@
                                                     </Border>
 
                                                     <!-- Hop List + Empty State -->
-                                                    <Grid MinHeight="120">
+                                                    <Grid Grid.Row="1" MinHeight="120">
                                                         <ListView
                                                             x:Name="HopList"
                                                             x:Uid="NetMap_HopList" services:RuntimeLocalization.Uid="NetMap_HopList"
-                                                            MaxHeight="224"
                                                             HorizontalContentAlignment="Stretch"
                                                             AutomationProperties.AutomationId="NetMapHopList"
                                                             IsItemClickEnabled="True"
@@ -882,9 +885,9 @@
                                                             <TextBlock HorizontalAlignment="Center" Style="{StaticResource NetMapSecondary}" Text="{x:Bind ViewModel.RunStatus, Mode=OneWay}" TextAlignment="Center" />
                                                         </StackPanel>
                                                     </Grid>
-                                                </StackPanel>
+                                                </Grid>
                                             </Border>
-                                        </StackPanel>
+                                        </Grid>
                                     </Grid>
 
                                     <!-- Bottom: Selected Hop / Route Summary Bar -->

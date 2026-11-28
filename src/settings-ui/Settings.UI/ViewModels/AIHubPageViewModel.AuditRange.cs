@@ -250,6 +250,7 @@ public sealed partial class AIHubPageViewModel
                         IsAuditing = false;
                     }
                     PresentAuditRangeView(view, scanCompleted: refresh);
+                    CaptureWeeklyScanSnapshot(snapshot, selection.Events);
                     if (refresh && !fullRead)
                     {
                         EndStage("Collect event logs", audit: true);

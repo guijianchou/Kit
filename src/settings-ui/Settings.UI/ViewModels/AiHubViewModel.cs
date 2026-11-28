@@ -251,7 +251,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
     private readonly RouteDispatcher _routeDispatcher;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly PolicyDraft[] _policyDrafts = [new(), new(), new()];
+    private readonly PolicyDraft[] _policyDrafts = [new(), new(), new(), new()];
     private AiHubSettingsStore _settingsStore = null!;
     private SecurityPolicyService _securityService = null!;
     private IAiTaskEngine? _engine;
@@ -576,7 +576,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
         get => _activePolicyIndex;
         set
         {
-            if (value is >= 0 and <= 2 && Set(ref _activePolicyIndex, value))
+            if (value is >= 0 and <= 3 && Set(ref _activePolicyIndex, value))
             {
                 OnPropertyChanged(nameof(ActivePolicyTabIndex));
                 NotifyTaskPolicyIndexChanged();
@@ -600,7 +600,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
 
     /// <summary>
     /// Policy selected on the AI Hub page, which now offers only the task-specific chains:
-    /// 0 = security audit, 1 = optimization.
+    /// 0 = security audit, 1 = optimization, 2 = weekly report.
     /// </summary>
     /// <remarks>
     /// The global security policy moved to General because it governs every plugin, so this
@@ -612,7 +612,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
         get => Math.Max(0, ActivePolicyIndex - 1);
         set
         {
-            if (value is >= 0 and <= 1)
+            if (value is >= 0 and <= 2)
             {
                 ActivePolicyIndex = value + 1;
             }
@@ -625,6 +625,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
         OnPropertyChanged(nameof(TaskPolicyIndex));
         OnPropertyChanged(nameof(IsSecurityAuditPolicyTab));
         OnPropertyChanged(nameof(IsOptimizationPolicyTab));
+        OnPropertyChanged(nameof(IsWeeklyReportPolicyTab));
     }
 
     /// <summary>True when the security-audit chain policy is selected.</summary>
@@ -632,6 +633,8 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
 
     /// <summary>True when the optimization chain policy is selected.</summary>
     public bool IsOptimizationPolicyTab => TaskPolicyIndex == 1;
+
+    public bool IsWeeklyReportPolicyTab => TaskPolicyIndex == 2;
 
     private bool _policiesLoading;
     private Task _policyInitialization = Task.CompletedTask;
@@ -675,10 +678,13 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
 
     public string OptimizationPolicyPath => _securityService?.GetTaskPolicyPath("system-optimization") ?? string.Empty;
 
+    public string WeeklyReportPolicyPath => _securityService?.GetTaskPolicyPath("windows-stability-report") ?? string.Empty;
+
     public string CurrentPolicyFilePath => ActivePolicyIndex switch
     {
         1 => SecurityAuditPolicyPath,
         2 => OptimizationPolicyPath,
+        3 => WeeklyReportPolicyPath,
         _ => SecurityPolicyPath,
     };
 
@@ -686,6 +692,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
     {
         1 => "AiHub_PolicyDescriptionAudit".GetLocalizedOrFallback("Review the supplied Windows events and distinguish evidence from possible explanations."),
         2 => "AiHub_PolicyDescriptionOptimization".GetLocalizedOrFallback("Review locally verified candidates without expanding their paths, actions or scope."),
+        3 => "AIHub_WeeklyPolicyDescription".GetLocalizedOrFallback("Review seven days of stability evidence, distinguish scan references from fresh observations, and provide verified next steps."),
         _ => "AiHub_PolicyDescriptionGlobal".GetLocalizedOrFallback("Shared safety and privacy rules apply to every AI task."),
     };
 
@@ -699,6 +706,12 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
     {
         get => _policyDrafts[2].Content;
         set => UpdatePolicyDraft(2, value);
+    }
+
+    public string WeeklyReportPolicyContent
+    {
+        get => _policyDrafts[3].Content;
+        set => UpdatePolicyDraft(3, value);
     }
 
     public string SecurityPolicyContent
@@ -726,6 +739,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
         {
             1 => nameof(SecurityAuditPolicyContent),
             2 => nameof(OptimizationPolicyContent),
+            3 => nameof(WeeklyReportPolicyContent),
             _ => nameof(SecurityPolicyContent),
         });
         OnPropertyChanged(nameof(SecurityPolicyStatusText));
@@ -967,6 +981,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
                 await _securityService.LoadGlobalPolicyAsync(token),
                 await _securityService.LoadTaskAgentsPolicyAsync("aihub", "security-audit", token),
                 await _securityService.LoadTaskAgentsPolicyAsync("aihub", "system-optimization", token),
+                await _securityService.LoadTaskAgentsPolicyAsync("aihub", "windows-stability-report", token),
             ];
             token.ThrowIfCancellationRequested();
             for (int index = 0; index < policies.Length; index++)
@@ -1236,6 +1251,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocal
     {
         1 => "security-audit",
         2 => "system-optimization",
+        3 => "windows-stability-report",
         _ => throw new ArgumentOutOfRangeException(nameof(index)),
     };
 

@@ -329,9 +329,9 @@ public sealed partial class WingetViewModel : PageViewModelBase, ILiveLocalizabl
 
     public string DownloadDirectory => lastDownload?.Directory ?? string.Empty;
 
-    public double Progress => Math.Clamp(status.ProgressPercent ?? 0, 0, 100);
+    public double Progress => status.ProgressPercent is double value && double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 0;
 
-    public bool IsProgressIndeterminate => status.ProgressPercent == null;
+    public bool IsProgressIndeterminate => status.ProgressPercent is not double value || !double.IsFinite(value);
 
     public string StatusText => !IsEnabled ? L("Disabled") :
         !connected ? L(string.IsNullOrWhiteSpace(connectionError) ? "Connecting" : "Unavailable") :

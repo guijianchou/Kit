@@ -102,7 +102,7 @@ public sealed class AiUsageStoreTests
         store.Record(CodexRoute(Guid.NewGuid(), "gpt-6-luna", "Main", input: 3_000, cached: 0, output: 300, elapsedMs: 1_000, timestampUtc: now.AddDays(-2)), "week-session");
         store.Record(CodexRoute(Guid.NewGuid(), "gpt-6-astra", "Main", input: 4_000, cached: 1_000, output: 400, elapsedMs: 1_000, timestampUtc: now.AddMinutes(-1)), "current-session");
 
-        Assert.AreEqual(4L, store.GetOverview(AiUsageTimeRange.AllTime, "current-session").RouteCalls);
+        Assert.AreEqual(3L, store.GetOverview(AiUsageTimeRange.AllTime, "current-session").RouteCalls);
         Assert.AreEqual(3L, store.GetOverview(AiUsageTimeRange.Last30Days, "current-session").RouteCalls);
         Assert.AreEqual(2L, store.GetOverview(AiUsageTimeRange.Last7Days, "current-session").RouteCalls);
         Assert.AreEqual(1L, store.GetOverview(AiUsageTimeRange.Session, "current-session").RouteCalls);
@@ -393,7 +393,7 @@ public sealed class AiUsageStoreTests
                 """);
         }
 
-        var store = new AiUsageStore(dataDir);
+        var store = new AiUsageStore(dataDir, () => new DateTimeOffset(2026, 11, 27, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
         AiUsageOverview overview = store.GetOverview(AiUsageTimeRange.AllTime, "sess-2");
 
         Assert.IsTrue(overview.PersistenceAvailable);
@@ -407,6 +407,48 @@ public sealed class AiUsageStoreTests
         Assert.AreEqual("legacy", overview.RecentCalls[1].ModelSource);
         Assert.AreEqual(3773L, overview.RecentCalls[0].UncachedInputTokens);
         Assert.AreEqual(8887L, overview.RecentCalls[0].TotalTokens);
+    }
+
+    [TestMethod]
+    public void ExpiredUsageIsDeletedOnReadAndCannotBeReinserted()
+    {
+        using var fixture = new FixtureDirectory();
+        string directory = fixture.PathFor("retention");
+        DateTimeOffset now = new(2026, 11, 27, 12, 0, 0, TimeSpan.Zero);
+        var store = new AiUsageStore(directory, () => now, TimeZoneInfo.Utc);
+        store.Record(CodexRoute(Guid.NewGuid(), "expired", "Main", 1, 0, 1, 1, timestampUtc: now.AddDays(-29)), "s1");
+        store.Record(CodexRoute(Guid.NewGuid(), "boundary", "Main", 1, 0, 1, 1, timestampUtc: now.AddDays(-28)), "s1");
+        now = now.AddDays(2);
+        var reopened = new AiUsageStore(directory, () => now, TimeZoneInfo.Utc);
+        Assert.AreEqual(1L, reopened.GetOverview(AiUsageTimeRange.AllTime).RouteCalls);
+        reopened.Record(CodexRoute(Guid.NewGuid(), "replayed-old", "Main", 1, 0, 1, 1, timestampUtc: now.AddDays(-31)), "s1");
+        using var connection = WinSqlite3.Open(reopened.DatabasePath, readOnly: true);
+        using var rows = connection.Prepare("SELECT COUNT(*), MIN(timestamp_unix_ms) FROM codex_usage_events;");
+        Assert.IsTrue(rows.Step());
+        Assert.AreEqual(1L, rows.GetInt64(0), "Expiry must remove persisted rows, not only hide them in the query.");
+        Assert.AreEqual(now.AddDays(-30).ToUnixTimeMilliseconds(), rows.GetInt64(1));
+    }
+
+    [TestMethod]
+    [DataRow(3, 8, 23)]
+    [DataRow(11, 1, 25)]
+    public void TodayUsesLocalMidnightOffsetsAcrossDaylightSavingTransitions(int month, int day, int hours)
+    {
+        using var fixture = new FixtureDirectory();
+        TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
+        DateTimeOffset now = new(2026, month, day, 20, 0, 0, TimeSpan.Zero);
+        var (start, end) = AiUsageStore.LocalDayWindow(now, zone);
+        Assert.AreEqual((double)hours, (end - start).TotalHours);
+        var store = new AiUsageStore(fixture.PathFor("today"), () => now, zone);
+        foreach (var timestamp in new[] { start.AddMilliseconds(-1), start, end.AddMilliseconds(-1), end })
+        {
+            store.Record(CodexRoute(Guid.NewGuid(), "model", "Main", 1, 0, 1, 1, timestampUtc: timestamp), "s1");
+        }
+
+        var overview = store.GetOverview();
+        Assert.AreEqual(AiUsageTimeRange.Today, overview.Range);
+        Assert.AreEqual(2L, overview.RouteCalls);
+        Assert.IsTrue(overview.RecentCalls.All(call => call.TimestampUtc >= start && call.TimestampUtc < end));
     }
 
     private static AiDiagnosticRecord CodexRoute(

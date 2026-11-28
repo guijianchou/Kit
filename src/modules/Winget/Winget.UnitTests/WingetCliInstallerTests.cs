@@ -28,7 +28,7 @@ public sealed class WingetCliInstallerTests
         CollectionAssert.AreEqual(
             new[]
             {
-                "install", "--id", package.Id, "--exact", "--version", "2.0", "--source", "winget", "--interactive", "--disable-interactivity", "--no-upgrade",
+                "install", "--id", package.Id, "--exact", "--version", "2.0", "--source", "winget", "--interactive", "--disable-interactivity", "--output-locale", "en-US", "--no-upgrade",
             },
             start.ArgumentList.ToArray());
         foreach (string disallowed in new[] { "--force", "--ignore-security-hash", "--allow-reboot", "--skip-dependencies", "--location", "--accept-source-agreements", "--accept-package-agreements" })
@@ -198,7 +198,7 @@ public sealed class WingetCliInstallerTests
         var result = await operation;
         Assert.AreEqual("Native operation finished\n", result.Output);
         Assert.AreEqual("Native operation finished\n", progress.Items[^1].Output);
-        Assert.IsTrue(progress.Items.All(item => item.Percentage is null), "Localized output is display text, never parsed as package progress.");
+        Assert.IsTrue(progress.Items.All(item => item.Percentage is null), "Arbitrary percentages in messages are not native progress bars.");
         Assert.AreEqual(exitCode == 0, result.Succeeded);
     }
 
@@ -214,6 +214,49 @@ public sealed class WingetCliInstallerTests
         var result = await operation;
         Assert.IsTrue(result.Succeeded);
         Assert.AreEqual("Completed\n", result.Output);
+    }
+
+    [TestMethod]
+    public async Task NativeProgressSeparatesDownloadFromInstallationAndWaitsForTheExitResult()
+    {
+        var runner = new FakeRunner();
+        var progress = new CapturingProgress();
+        var operation = new WingetCliInstaller(runner).RunAsync(Package, true, false, progress, CancellationToken.None);
+        await runner.Started.Task;
+        runner.OutputReceived!("Downloading https://example.invalid/package.exe\n  1.25 MB / 5.00 MB");
+        Assert.AreEqual("Downloading", progress.Items[^1].Stage);
+        Assert.AreEqual(25.0, progress.Items[^1].Percentage);
+        Assert.AreEqual(1310720UL, progress.Items[^1].BytesDownloaded);
+        runner.OutputReceived!("  5.00 MB / 5.00 MB\nSuccessfully verified installer hash\nStarting package install...\n");
+        Assert.AreEqual("Installing", progress.Items[^1].Stage);
+        Assert.IsNull(progress.Items[^1].Percentage, "Downloaded 100% must not become installation 100%.");
+        Assert.AreEqual(0UL, progress.Items[^1].BytesRequired);
+        runner.OutputReceived!("Starting package install...\n" + new string('█', 30) + "  100%\nSuccessfully installed\n");
+        Assert.IsFalse(operation.IsCompleted, "Progress output never authorizes a success result before WinGet exits.");
+        runner.Exit.TrySetResult(1);
+        Assert.IsFalse((await operation).Succeeded, "The real exit code outranks a successful-looking output line.");
+    }
+
+    [TestMethod]
+    public async Task CancellationFreezesReportedProgressButStillRetainsNativeOutputAndExit()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var runner = new FakeRunner();
+        var progress = new CapturingProgress();
+        var operation = new WingetCliInstaller(runner).RunAsync(Package, true, false, progress, cancellation.Token);
+        await runner.Started.Task;
+        runner.OutputReceived!("Downloading https://example.invalid/package.exe\n  1 MB / 4 MB");
+        cancellation.Cancel();
+        runner.OutputReceived!("Starting package install...\n" + new string('█', 30) + "  100%");
+        Assert.AreEqual("Cancelling", progress.Items[^1].Stage);
+        Assert.AreEqual(25.0, progress.Items[^1].Percentage);
+        Assert.AreEqual(1048576UL, progress.Items[^1].BytesDownloaded);
+        Assert.IsFalse(operation.IsCompleted);
+        runner.Exit.TrySetResult(0);
+        var result = await operation;
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsTrue(result.CancellationRequested);
+        StringAssert.Contains(result.Output!, "Starting package install");
     }
 
     [DataTestMethod]

@@ -149,6 +149,7 @@ internal static class NetMapVisualSmoke
         Require(!vm.IsDetectionOn, "No detection session was started.");
         long generation = vm.Snapshot.Generation;
         await CheckGlobalMap(page, session, generation);
+        await CheckLongRouteLayout(page, session, generation);
         foreach (var scenario in new[] { "regional", "pacific" })
         {
             HopResult[] hops = scenario == "regional"
@@ -177,6 +178,7 @@ internal static class NetMapVisualSmoke
                     typeof(NetMapPage).GetMethod("MapZoomReset_Click", PrivateInstance).Invoke(page, new object[] { null, null });
                     map.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
                     await Settle();
+                    CheckRouteSurfaceLayout(page, scenario + "/" + width + "/" + theme);
                     CheckMap(page, vm.Hops[2], scenario + "/" + width + "/" + theme);
                     string name = scenario + "-" + width + "-" + theme.ToString().ToLowerInvariant();
                     await Capture(page, name + "-page.png");
@@ -328,11 +330,69 @@ internal static class NetMapVisualSmoke
                 map.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
                 await Settle();
                 string name = "global-" + width + "-" + theme.ToString().ToLowerInvariant();
+                CheckRouteSurfaceLayout(page, name);
                 CheckMapStrokes(page, name);
                 Require(SelectedDetails(page) == null && page.ViewModel.Hops.Count == 0, name + ": world map has no selected-hop overlay.");
                 await Capture(page, name + "-map.png", map);
             }
         }
+    }
+
+    private static async Task CheckLongRouteLayout(NetMapPage page, NetMapSession session, long generation)
+    {
+        var hops = Enumerable.Range(1, 24).Select(index => Hop(index, "192.0.2." + index,
+            20 + index * .2, 110 + index * .2, "Example city " + index, "Example region", "CN", 64496, "Example route fixture")).ToArray();
+        ApplySnapshot(page, session, page.ViewModel.Snapshot with { Generation = generation, Running = false, Hops = hops });
+        var list = (ListView)page.FindName("HopList");
+        list.SelectedIndex = -1;
+        foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+        foreach (int width in new[] { 1320, 620, 1320 })
+        {
+            ((FrameworkElement)window.Content).RequestedTheme = theme;
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 940));
+            ((FrameworkElement)page.FindName("MapBody")).StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
+            await Settle();
+            string context = $"24-hop/{width}/{theme}";
+            CheckRouteSurfaceLayout(page, context);
+            var scroll = Descendants(list).OfType<ScrollViewer>().Single();
+            Require(list.Items.Count == 24 && scroll.ViewportHeight > 100 && scroll.ScrollableHeight > 0,
+                context + ": long routes retain every hop in a bounded internally scrolling viewport.");
+            scroll.ChangeView(null, scroll.ScrollableHeight, null, true);
+            await Settle();
+            Require(scroll.VerticalOffset > 0 && Math.Abs(scroll.VerticalOffset - scroll.ScrollableHeight) <= 2,
+                context + ": the last route rows remain reachable by scrolling without extending the panel.");
+            CheckRouteSurfaceLayout(page, context + "/scrolled");
+            if (width == 1320) await Capture(page, $"route24-{theme.ToString().ToLowerInvariant()}-page.png");
+            scroll.ChangeView(null, 0, null, true);
+        }
+    }
+
+    private static void CheckRouteSurfaceLayout(NetMapPage page, string context)
+    {
+        var body = (Grid)page.FindName("MapBody");
+        var map = (FrameworkElement)page.FindName("MapSurface");
+        var route = (FrameworkElement)page.FindName("RouteSurface");
+        var panel = (FrameworkElement)page.FindName("RoutePanel");
+        var header = (FrameworkElement)page.FindName("RouteTableHeader");
+        var list = (ListView)page.FindName("HopList");
+        Windows.Foundation.Rect Bounds(FrameworkElement element) => element.TransformToVisual(body)
+            .TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+        var mapBounds = Bounds(map);
+        var routeBounds = Bounds(route);
+        var headerBounds = Bounds(header);
+        var listBounds = Bounds(list);
+        bool stacked = Grid.GetRow(panel) == 1;
+        Require(Math.Abs(map.ActualHeight - route.ActualHeight) <= 1 && map.ActualHeight >= 260 &&
+            Math.Abs(route.ActualHeight - panel.ActualHeight) <= 1,
+            context + ": map and MTR use the same bounded surface height for empty, short and long routes.");
+        Require(stacked
+            ? routeBounds.Top >= mapBounds.Bottom + 10 && Math.Abs(mapBounds.Left - routeBounds.Left) <= 1 && Math.Abs(mapBounds.Right - routeBounds.Right) <= 1
+            : Math.Abs(mapBounds.Top - routeBounds.Top) <= 1 && Math.Abs(mapBounds.Bottom - routeBounds.Bottom) <= 1 && routeBounds.Left >= mapBounds.Right + 10,
+            context + ": wide map/MTR top and bottom edges align, and narrow layout stacks both complete surfaces.");
+        Require(list.ActualHeight > 100 && listBounds.Top >= headerBounds.Bottom - 1 &&
+            listBounds.Bottom <= routeBounds.Bottom + 1 && routeBounds.Bottom - listBounds.Bottom <= 3,
+            context + ": route rows fill the remaining surface below the header without a bottom gap.");
+        Log($"ROUTE SURFACE {context}: stacked={stacked}, map={mapBounds}, route={routeBounds}, header={headerBounds}, list={listBounds}");
     }
 
     private static async Task CheckIncrementalUpdates(NetMapPage page, NetMapSession session, long generation)

@@ -16,6 +16,10 @@ public sealed record WingetServiceStatus
 
     public double? ProgressPercent { get; init; }
 
+    public ulong? BytesDownloaded { get; init; }
+
+    public ulong? BytesRequired { get; init; }
+
     public string? Message { get; init; }
 
     public string? Output { get; init; }

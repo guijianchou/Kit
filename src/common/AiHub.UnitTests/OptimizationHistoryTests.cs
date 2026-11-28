@@ -56,4 +56,24 @@ public sealed class OptimizationHistoryTests
         await Assert.ThrowsExactlyAsync<System.Text.Json.JsonException>(() => storage.SaveAsync(new OptimizationExecutionRecord()));
         Assert.AreEqual("invalid history", File.ReadAllText(path));
     }
+
+    [TestMethod]
+    public async Task LoadingPhysicallyPrunesRunsOutsideRollingThirtyDays()
+    {
+        using var fixture = new FixtureDirectory();
+        string state = fixture.PathFor("State");
+        DateTime now = new(2026, 11, 27, 12, 0, 0, DateTimeKind.Utc);
+        var storage = new OptimizationHistoryStorage(state, () => now);
+        var expired = new OptimizationExecutionRecord { StartedUtc = now.AddDays(-29), State = "completed" };
+        var boundary = new OptimizationExecutionRecord { StartedUtc = now.AddDays(-28), State = "completed" };
+        await storage.SaveAsync(expired);
+        await storage.SaveAsync(boundary);
+        now = now.AddDays(2);
+        Assert.AreEqual(boundary.RunId, (await storage.LoadAsync()).Single().RunId);
+        string path = Path.Combine(state, "optimization_history.json");
+        Assert.IsFalse(File.ReadAllText(path).Contains(expired.RunId.ToString(), StringComparison.OrdinalIgnoreCase));
+        await storage.SaveAsync(expired);
+        Assert.AreEqual(boundary.RunId, (await storage.LoadAsync()).Single().RunId);
+        Assert.IsFalse(File.ReadAllText(path).Contains(expired.RunId.ToString(), StringComparison.OrdinalIgnoreCase));
+    }
 }

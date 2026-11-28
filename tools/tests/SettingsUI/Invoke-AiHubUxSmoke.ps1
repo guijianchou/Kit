@@ -5,6 +5,8 @@ param(
     [string]$Language = 'en-us',
     [string]$RuntimeRoot,
     [switch]$ShellOnly,
+    [switch]$ReportOnly,
+    [string]$LiveDocument,
     [switch]$NavigationPersistence,
     [ValidateRange(1, 600)]
     [int]$TimeoutSeconds = 60
@@ -12,6 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'AiHubDerivedStateFixture.ps1')
+. (Join-Path $PSScriptRoot 'TestCrashLogFixture.ps1')
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
@@ -19,7 +22,7 @@ $reportRoot = Join-Path $repoRoot "TestResults\AiHubUx\$Configuration\$Language"
 if ($NavigationPersistence) { $reportRoot = Join-Path $reportRoot 'NavigationPersistence' }
 $testName = 'AiHubUxSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $RuntimeRoot ($testName + $_) }
-if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.AIHubWorker,Kit.WingetService,AiHubUxSmoke,winget -ErrorAction SilentlyContinue).Count) {
+if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.AIHubWorker,Kit.WingetService,AiHubUxSmoke,WingetPageSmoke,winget -ErrorAction SilentlyContinue).Count) {
     throw 'Close Kit and its workers before running the isolated AI Hub UI smoke test.'
 }
 if ((Get-Item -LiteralPath $RuntimeRoot).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing a redirected runtime directory.' }
@@ -46,7 +49,7 @@ $backups = @{}
 foreach ($name in @('settings.json', 'settings-placement.json', 'settings-ui.json', 'language.json', 'log_settings.json',
     'Awake\settings.json', 'LightSwitch\settings.json',
     'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md',
-    'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md',
+    'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\windows-stability-report\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md',
     'AiHub\State\audit_history.json', 'AiHub\State\optimization_history.json')) {
     $path = Join-Path $env:LOCALAPPDATA "Kit\$name"
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
@@ -58,14 +61,23 @@ $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
 $previousOutput = $env:KIT_AI_HUB_UX_TEST_OUTPUT
 $previousShellOnly = $env:KIT_SHELL_PALETTE_ONLY
+$previousReportOnly = $env:KIT_STABILITY_REPORT_ONLY
+$previousLiveDocument = $env:KIT_STABILITY_LIVE_DOCUMENT
 $previousNavigationPhase = $env:KIT_NAVIGATION_PERSISTENCE_PHASE
 $aiHubDerivedSnapshot = New-AiHubDerivedStateSnapshot (Join-Path $env:LOCALAPPDATA 'Kit\AiHub\State')
+$crashLogSnapshot = New-TestCrashLogSnapshot (Join-Path $env:LOCALAPPDATA 'Kit') $reportRoot
 $testProcess = $null
 try {
+    Clear-TestCrashLogFixture $crashLogSnapshot
     Clear-AiHubDerivedStateFixture $aiHubDerivedSnapshot
     $env:TEMP = $testTemp
     $env:TMP = $testTemp
     $env:KIT_SHELL_PALETTE_ONLY = if ($ShellOnly) { '1' } else { $null }
+    $env:KIT_STABILITY_REPORT_ONLY = if ($ReportOnly) { '1' } else { $null }
+    if ($LiveDocument -and (-not [IO.Path]::IsPathFullyQualified($LiveDocument) -or -not (Test-Path -LiteralPath $LiveDocument -PathType Leaf))) {
+        throw 'LiveDocument must name an existing absolute Markdown report path.'
+    }
+    $env:KIT_STABILITY_LIVE_DOCUMENT = $LiveDocument
     $env:KIT_NAVIGATION_PERSISTENCE_PHASE = $null
     if ($NavigationPersistence) {
         [IO.File]::WriteAllText((Join-Path $env:LOCALAPPDATA 'Kit\settings-ui.json'), '{"navigation_pane_open":true}', [Text.UTF8Encoding]::new($false))
@@ -86,7 +98,7 @@ try {
     [IO.File]::WriteAllText($aiServicePath, ($aiService | ConvertTo-Json -Depth 100), [Text.UTF8Encoding]::new($false))
     # Exercise policy loading and editing against identifiable synthetic content.
     # The original policy bytes are already backed up and restored in finally.
-    foreach ($taskId in @('security-audit', 'system-optimization')) {
+    foreach ($taskId in @('security-audit', 'system-optimization', 'windows-stability-report')) {
         $path = Join-Path $env:LOCALAPPDATA "Kit\AiHub\chains\$taskId\AGENTS.md"
         [IO.Directory]::CreateDirectory((Split-Path -Parent $path)) | Out-Null
         [IO.File]::WriteAllText($path, "# Synthetic $taskId policy`n`nUI regression fixture only. Do not run tasks or inspect workstation data.`n", [Text.UTF8Encoding]::new($false))
@@ -102,6 +114,7 @@ try {
     foreach ($arg in @('/nostdlib+', '/target:exe', '/langversion:preview')) { $compilerArgs.Add($arg) }
     $compilerArgs.Add('/out:"' + (Join-Path $RuntimeRoot "$testName.dll") + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'AiHubUxSmoke.cs') + '"')
+    $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'WindowsStabilityUiChecks.cs') + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'ShellPaletteChecks.cs') + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'NavigationPanePersistenceChecks.cs') + '"')
     foreach ($file in Get-ChildItem -LiteralPath $RuntimeRoot -Filter '*.dll' -File) {
@@ -156,9 +169,17 @@ try {
         if ([IO.File]::ReadAllText($path) -ne '[]') { throw "Synthetic UI smoke changed execution history: $name" }
     }
 } finally {
-    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
+    $crashLogRestoreFailure = $null
+    try {
+        if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
+    } finally {
+        try { Restore-TestCrashLogFixture $crashLogSnapshot }
+        catch { $crashLogRestoreFailure = $_ }
+    }
     $env:KIT_AI_HUB_UX_TEST_OUTPUT = $previousOutput
     $env:KIT_SHELL_PALETTE_ONLY = $previousShellOnly
+    $env:KIT_STABILITY_REPORT_ONLY = $previousReportOnly
+    $env:KIT_STABILITY_LIVE_DOCUMENT = $previousLiveDocument
     $env:KIT_NAVIGATION_PERSISTENCE_PHASE = $previousNavigationPhase
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
@@ -178,4 +199,5 @@ try {
         }
     }
     if ($derivedRestoreFailure) { throw $derivedRestoreFailure }
+    if ($crashLogRestoreFailure) { throw $crashLogRestoreFailure }
 }

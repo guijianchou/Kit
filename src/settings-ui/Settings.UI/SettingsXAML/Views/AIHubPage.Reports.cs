@@ -77,86 +77,35 @@ public sealed partial class AIHubPage
         }
     }
 
-    private async void OnWeeklyReportClick(object sender, RoutedEventArgs args) => await ShowPeriodReportAsync(monthly: false);
+    private async void OnWeeklyReportClick(object sender, RoutedEventArgs args) => await ShowWeeklyReportAsync();
 
-    private async void OnMonthlyReportClick(object sender, RoutedEventArgs args) => await ShowPeriodReportAsync(monthly: true);
+    private AuditPeriodReportWindow _periodReportWindow;
 
-    private async Task ShowPeriodReportAsync(bool monthly)
+    private async Task ShowWeeklyReportAsync()
     {
-        if (_activeDialog != null || !ViewModel.CanConfigureAudit || !_currentPage || _disposed)
+        if (!_currentPage || _disposed)
         {
             return;
         }
-
-        AuditHistoryDropDown.Flyout.Hide();
-        var body = new TextBlock
-        {
-            Text = "AIHub_WeeklyLoading".GetLocalizedOrFallback("Reading audit history…"),
-            TextWrapping = TextWrapping.Wrap,
-            IsTextSelectionEnabled = true,
-        };
-        var appendix = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
-        var details = new Expander
-        {
-            Header = "AIHub_ReportDetails".GetLocalizedOrFallback("Complete findings and action plans"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Content = appendix,
-            IsEnabled = false,
-        };
-        var content = new StackPanel { Spacing = 18, MinWidth = 360, MaxWidth = 760 };
-        content.Children.Add(body);
-        content.Children.Add(details);
-        AuditPeriodReport loadedReport = null;
-        bool chinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-        details.Expanding += (_, _) =>
-        {
-            if (loadedReport != null && string.IsNullOrEmpty(appendix.Text))
-            {
-                appendix.Text = loadedReport.FormatDetails(chinese);
-            }
-        };
-        var dialog = new ContentDialog
-        {
-            Title = monthly ? ViewModel.MonthlyReportLabel : "AIHub_WeeklyReport/Content".GetLocalizedOrFallback("Weekly audit report"),
-            Content = new ScrollViewer { Content = content, MaxHeight = 640, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled },
-            PrimaryButtonText = ViewModel.CopyReportLabel,
-            IsPrimaryButtonEnabled = false,
-            CloseButtonText = "AIHub_WeeklyClose".GetLocalizedOrFallback("Close"),
-            DefaultButton = ContentDialogButton.Close,
-        };
-        Task<ContentDialogResult> closing = ShowDialogAsync(dialog);
         try
         {
-            var report = await ViewModel.LoadPeriodReportAsync(monthly);
-            if (_activeDialog == dialog)
+            if (_periodReportWindow == null || _periodReportWindow.IsClosed)
             {
-                loadedReport = report;
-                body.Text = report.FormatOverview(chinese);
-                details.IsEnabled = report.Issues.Count > 0;
-                dialog.IsPrimaryButtonEnabled = report.Days.Count > 0;
+                _periodReportWindow = new AuditPeriodReportWindow(_settingsWindow);
             }
-        }
-        catch (Exception)
-        {
-            body.Text = "AIHub_WeeklyReadFailed".GetLocalizedOrFallback("Audit history could not be read. Reopen the report to retry.");
-        }
 
-        if (await closing == ContentDialogResult.Primary)
+            // Capture the selected cutoff: later page navigation cannot retarget an open report.
+            var date = DateOnly.FromDateTime(ViewModel.SelectedAuditDate?.Date ?? DateTime.Today);
+            await _periodReportWindow.ShowWeeklyReportAsync((mode, forceRefresh, progress, cancellationToken) =>
+                ViewModel.LoadWindowsStabilityWeeklyReportAsync(mode, date, forceRefresh, progress, cancellationToken), date,
+                (mode, cancellationToken) => ViewModel.ReadSavedWindowsStabilityWeeklyReportAsync(mode, date, cancellationToken));
+        }
+        catch (Exception exception)
         {
-            try
-            {
-                var data = new DataPackage();
-                data.SetText(loadedReport?.Format(chinese) ?? body.Text);
-                Clipboard.SetContent(data);
-            }
-            catch (Exception exception)
-            {
-                ViewModel.PostStatusNotification("AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", exception.Message), InfoBarSeverity.Error);
-            }
+            ManagedCommon.Logger.LogWarning($"Period report window could not open ({exception.GetType().Name}).");
+            ViewModel.PostStatusNotification("AIHub_WeeklyReadFailed".GetLocalizedOrFallback("Audit history could not be read. Reopen the report to retry."), InfoBarSeverity.Error);
         }
     }
-
     private void OnCopySystemDiagnosisClick(object sender, RoutedEventArgs args)
     {
         if (!ViewModel.HasSystemDiagnosis)

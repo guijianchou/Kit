@@ -78,6 +78,7 @@ public sealed class SecurityPolicyService
 
         EnsureTaskDefaultPolicy("security-audit", TaskPolicyDefaults.DefaultSecurityAuditInstructions);
         EnsureTaskDefaultPolicy("system-optimization", TaskPolicyDefaults.DefaultSystemOptimizationInstructions);
+        EnsureTaskDefaultPolicy(DefaultWeeklyReportPolicy.TaskId, DefaultWeeklyReportPolicy.Instructions);
 
         // The self-test chain is always present so an operator can check the service without
         // depending on a plugin's own policy being configured.
@@ -181,7 +182,9 @@ public sealed class SecurityPolicyService
             ? TaskPolicyDefaults.DefaultSecurityAuditInstructions
             : taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase)
                 ? TaskPolicyDefaults.DefaultSystemOptimizationInstructions
-                : taskId.Equals(SelfTestPolicy.TaskId, StringComparison.OrdinalIgnoreCase) ? SelfTestPolicy.Instructions : string.Empty;
+                : taskId.Equals(DefaultWeeklyReportPolicy.TaskId, StringComparison.OrdinalIgnoreCase)
+                    ? DefaultWeeklyReportPolicy.Instructions
+                    : taskId.Equals(SelfTestPolicy.TaskId, StringComparison.OrdinalIgnoreCase) ? SelfTestPolicy.Instructions : string.Empty;
 
     private Task<string> LoadTaskPolicyAsync(string pluginId, string taskId, string fileName, CancellationToken cancellationToken)
     {

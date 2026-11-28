@@ -59,7 +59,7 @@ public sealed partial class ShellPage
     private AiUsageOverview? _aiUsageOverview;
     private AiSessionActivitySnapshot? _aiUsageActivity;
     private string _aiUsageActiveKernel = AiKernelCatalog.Codex;
-    private AiUsageTimeRange _aiUsageRange = AiUsageTimeRange.AllTime;
+    private AiUsageTimeRange _aiUsageRange = AiUsageTimeRange.Today;
     private AiUsageTab _aiUsageTab = AiUsageTab.Overview;
     private AiUsageUpdate? _aiUsagePending;
     private bool _aiUsageActive;
@@ -271,6 +271,8 @@ public sealed partial class ShellPage
             }
 
             _aiUsageActive = true;
+            _aiUsageRange = AiUsageTimeRange.Today;
+            _aiUsageOverview = null;
             _aiUsageGeneration++;
             _aiUsageWindow = window;
             window.Changed += OnAiUsageWindowChanged;
@@ -1516,6 +1518,7 @@ public sealed partial class ShellPage
         var elapsedPill = new Border
         {
             Background = CreateGlassInsetBrush(),
+            BackgroundSizing = BackgroundSizing.OuterBorderEdge,
             BorderBrush = phaseBrush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
@@ -1787,6 +1790,7 @@ public sealed partial class ShellPage
         var border = new Border
         {
             Background = CreateGlassCardBrush(),
+            BackgroundSizing = BackgroundSizing.OuterBorderEdge,
             BorderBrush = borderOverride ?? CreateGlassBorderBrush(),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(9),

@@ -79,7 +79,7 @@ public sealed class AuditPeriodReportTests
     }
 
     [TestMethod]
-    public async Task SavingAnAuditRefreshesBothReportsAndExplicitEmptyPeriodIsSaved()
+    public async Task SavingAnAuditRefreshesBothReportsWithoutRecreatingExpiredExports()
     {
         using var fixture = new FixtureDirectory();
         var store = new AuditHistoryStorage(fixture.RootPath);
@@ -87,7 +87,7 @@ public sealed class AuditPeriodReportTests
         Assert.AreEqual(2, Directory.GetFiles(store.ReportsDirectory, "*.md").Length);
         var empty = await store.LoadPeriodReportAsync(new DateOnly(2000, 1, 15), TimeZoneInfo.Utc, monthly: true);
         Assert.AreEqual(0, empty.Days.Count);
-        StringAssert.Contains(await File.ReadAllTextAsync(Path.Combine(store.ReportsDirectory, "monthly-2000-01-15.md")), "No saved audits");
+        Assert.IsFalse(File.Exists(Path.Combine(store.ReportsDirectory, "monthly-2000-01-15.md")));
     }
 
     [TestMethod]
@@ -124,9 +124,14 @@ public sealed class AuditPeriodReportTests
         current.AnalysisOutcome = "ok";
         store.SaveResult(current, retentionDays: 1);
         var report = await store.LoadPeriodReportAsync(DateOnly.FromDateTime(todayLocal), TimeZoneInfo.Local, true);
-        Assert.AreEqual(1, report.PreviousDays.Count,
-            $"Prior scan {priorMonth:o} ({priorMonth.ToLocalTime():o}) must be retained in baseline {report.PreviousStartDate} through {report.PreviousEndDate}.");
-        Assert.AreEqual(65, report.PreviousDays.Single().HealthScore);
+        bool retained = priorMonth >= DateTime.UtcNow.AddDays(-30);
+        Assert.AreEqual(retained ? 1 : 0, report.PreviousDays.Count,
+            "A baseline snapshot must obey the same rolling 30-day retention as the current period.");
+        if (retained)
+        {
+            Assert.AreEqual(65, report.PreviousDays.Single().HealthScore);
+        }
+
         Assert.AreEqual(75, report.Days.Single().HealthScore);
         Assert.AreEqual(0, report.IncompleteDays);
     }
@@ -262,7 +267,7 @@ public sealed class AuditPeriodReportTests
     }
 
     [TestMethod]
-    public async Task EarliestRetainedExportKeepsBothCalendarMonths()
+    public async Task ArchiveRemovesScansBeyondRollingThirtyDays()
     {
         using var fixture = new FixtureDirectory();
         var store = new AuditHistoryStorage(fixture.RootPath);
@@ -270,17 +275,36 @@ public sealed class AuditPeriodReportTests
         var scans = Enumerable.Range(0, 180).Select(index => new AuditResult { Timestamp = today.AddDays(-index), HealthScore = 75 }).ToList();
         await File.WriteAllTextAsync(Path.Combine(fixture.RootPath, "audit_history.json"), JsonSerializer.Serialize(scans, AIHubLibJsonContext.Default.ListAuditResult));
         store.SaveResult(scans[0], retentionDays: 1);
-        DateOnly cutoff = DateOnly.FromDateTime(today.ToLocalTime()).AddDays(-92);
-        var report = await store.LoadPeriodReportAsync(cutoff, TimeZoneInfo.Local, true);
-        Assert.AreEqual(cutoff.Day, report.Days.Count);
-        Assert.AreEqual(Math.Min(cutoff.Day, DateTime.DaysInMonth(report.PreviousStartDate.Year, report.PreviousStartDate.Month)), report.PreviousDays.Count);
-        Assert.IsFalse(report.HistoryIncomplete);
         var archive = JsonSerializer.Deserialize(await File.ReadAllTextAsync(Path.Combine(store.ReportsDirectory, "daily-summary.json")), AIHubLibJsonContext.Default.AuditReportArchive)!;
-        Assert.AreEqual(155, archive.Days.Count);
+        Assert.IsTrue(archive.Days.Count <= 31);
+        Assert.IsTrue(archive.Days.SelectMany(day => day.Scans).All(scan => scan.Timestamp >= DateTime.UtcNow.AddDays(-30)));
+        Assert.IsNotNull(archive.PrunedThrough);
     }
 
     [TestMethod]
-    public async Task LegacyArchiveMigrationPreservesExistingOlderExport()
+    public async Task ExpiredBaselineDoesNotFreezeSameDayMonthlyReportOrBlockLegacyMarkdownUpgrade()
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AuditHistoryStorage(fixture.RootPath);
+        DateTime timestamp = DateTime.UtcNow;
+        var scan = new AuditResult { Timestamp = timestamp, AnalysisOutcome = "pending", HealthScore = 45 };
+        store.SaveResult(scan);
+        string path = Path.Combine(store.ReportsDirectory, $"monthly-{timestamp.ToLocalTime():yyyy-MM-dd}.md");
+        File.WriteAllText(path, "# Legacy monthly report\nPrevious summary.");
+        scan.AnalysisOutcome = "ok";
+        scan.UsedModel = "review-model";
+        scan.HealthScore = 85;
+        store.SaveResult(scan);
+        var document = AuditStabilityReportDocument.Read(path);
+        Assert.IsFalse(document.Report.CurrentRetainedHistoryIncomplete);
+        Assert.AreEqual(1, document.Report.CompletedAiAudits);
+        Assert.AreEqual(0, document.Report.IncompleteAiAudits);
+        Assert.AreEqual(85, document.Report.Days.Single().HealthScore);
+        StringAssert.Contains(document.Format(false), "review-model");
+    }
+
+    [TestMethod]
+    public async Task LegacyArchiveMigrationRemovesExpiredSnapshots()
     {
         using var fixture = new FixtureDirectory();
         var store = new AuditHistoryStorage(fixture.RootPath);
@@ -294,14 +318,13 @@ public sealed class AuditPeriodReportTests
         string oldReport = Path.Combine(store.ReportsDirectory, $"monthly-{cutoff:yyyy-MM-dd}.md");
         const string completeExport = "Previously exported complete month and baseline.";
         await File.WriteAllTextAsync(oldReport, completeExport);
-        var report = await store.LoadPeriodReportAsync(cutoff, TimeZoneInfo.Local, true);
+        var report = await store.LoadPeriodReportAsync(DateOnly.FromDateTime(today.ToLocalTime()), TimeZoneInfo.Local, true);
         Assert.IsTrue(report.HistoryIncomplete);
-        Assert.AreEqual(completeExport, await File.ReadAllTextAsync(oldReport));
-        Assert.AreEqual(1, report.Days.Count);
-        Assert.AreEqual(12, report.Days.Single().Audits);
         var migrated = JsonSerializer.Deserialize(await File.ReadAllTextAsync(Path.Combine(store.ReportsDirectory, "daily-summary.json")), AIHubLibJsonContext.Default.AuditReportArchive)!;
         Assert.AreEqual(3, migrated.Version);
-        Assert.AreEqual(93, migrated.Days.Count);
+        Assert.IsTrue(migrated.Days.Count <= 31);
+        Assert.IsTrue(migrated.Days.SelectMany(day => day.Scans).All(scan => scan.Timestamp >= DateTime.UtcNow.AddDays(-30)));
+        Assert.IsFalse(migrated.Days.Any(day => day.Date == cutoff));
     }
 
     [TestMethod]

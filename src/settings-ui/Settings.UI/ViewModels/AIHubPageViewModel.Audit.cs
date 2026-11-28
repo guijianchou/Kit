@@ -412,18 +412,18 @@ public sealed partial class AIHubPageViewModel
     {
         if (high > 0)
         {
-            HealthVerdict = "AIHub_HealthVerdict_Critical".GetLocalizedOrFallback("Attention needed · Critical issues detected");
-            HealthSummaryText = "AIHub_HealthSummary_CriticalFormat".FormatLocalized("{0} high-priority issue(s) and {1} warning(s) detected. Action recommended.", high, medium);
+            HealthVerdict = "AIHub_HealthVerdict_Critical".GetLocalizedOrFallback("Attention needed · High-risk findings detected");
+            HealthSummaryText = "AIHub_HealthSummary_CriticalFormat".FormatLocalized("Recorded {0} high-risk and {1} medium-risk finding(s). Verify the evidence and prioritize the recommended actions.", high, medium);
         }
         else if (medium > 0)
         {
-            HealthVerdict = "AIHub_HealthVerdict_Good".GetLocalizedOrFallback("Good · Most indicators stable");
-            HealthSummaryText = "AIHub_HealthSummary_GoodFormat".FormatLocalized("No critical failures found. Recorded {0} warning(s) and {1} info event(s).", medium, low);
+            HealthVerdict = "AIHub_HealthVerdict_Good".GetLocalizedOrFallback("Review needed · Medium-risk findings remain");
+            HealthSummaryText = "AIHub_HealthSummary_GoodFormat".FormatLocalized("Recorded {0} medium-risk and {1} low-risk finding(s). Review the evidence and verify the impact.", medium, low);
         }
         else
         {
-            HealthVerdict = "AIHub_HealthVerdict_Excellent".GetLocalizedOrFallback("Excellent · System fully healthy");
-            HealthSummaryText = "AIHub_HealthSummary_Excellent".GetLocalizedOrFallback("No security violations or stability anomalies detected in the scanned period.");
+            HealthVerdict = "AIHub_HealthVerdict_Excellent".GetLocalizedOrFallback("No high- or medium-risk findings in this scan");
+            HealthSummaryText = "AIHub_HealthSummary_Excellent".GetLocalizedOrFallback("This assessment applies only to the collected evidence. Review any remaining low-risk findings and coverage limits.");
         }
 
         OnPropertyChanged(nameof(HealthVerdict));
@@ -470,7 +470,8 @@ public sealed partial class AIHubPageViewModel
         // 4. Group by CategoryLabel
         var groups = visibleIssues
             .GroupBy(issue => issue.CategoryLabel)
-            .OrderByDescending(group => group.Count(i => i.IsHigh))
+            .OrderByDescending(group => group.Any(i => i.ObservedEventLevel == 1))
+            .ThenByDescending(group => group.Count(i => i.IsHigh))
             .ThenByDescending(group => group.Count(i => i.IsMedium))
             .ThenByDescending(group => group.Sum(i => i.Occurrences))
             .ToList();
@@ -478,11 +479,7 @@ public sealed partial class AIHubPageViewModel
         var sections = new List<FindingSection>();
         foreach (var group in groups)
         {
-            var issues = group
-                .OrderByDescending(i => i.IsHigh)
-                .ThenByDescending(i => i.IsMedium)
-                .ThenByDescending(i => i.Occurrences)
-                .ToList();
+            var issues = AuditRiskPolicy.OrderFindings(group).ToList();
 
             bool expanded = expandMatches || (previousState.TryGetValue(group.Key, out bool wasExpanded) ? wasExpanded : true);
             sections.Add(new FindingSection(group.Key, issues, expanded));
@@ -496,7 +493,7 @@ public sealed partial class AIHubPageViewModel
 
         // 5. Priority findings (top 3)
         PriorityFindings.Clear();
-        foreach (var item in visibleIssues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).Take(3))
+        foreach (var item in AuditRiskPolicy.OrderFindings(visibleIssues).Take(3))
         {
             PriorityFindings.Add(item);
         }
@@ -560,7 +557,7 @@ public sealed partial class AIHubPageViewModel
                     }
                 });
 
-                var history = historyList.OrderByDescending(result => result.Timestamp).FirstOrDefault();
+                var history = await RestoreHistoricalRiskAsync(historyList.OrderByDescending(result => result.Timestamp).FirstOrDefault()).ConfigureAwait(false);
                 EnqueueOnUI(() =>
                 {
                     if (generation != _auditHistoryGeneration || IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad || !ReferenceEquals(snapshotAtLoad, _auditOverviewSnapshot))
@@ -715,6 +712,7 @@ public sealed partial class AIHubPageViewModel
                 .Where(h => h.Timestamp.ToLocalTime().Date == localDate)
                 .OrderByDescending(h => h.Timestamp)
                 .FirstOrDefault();
+            match = await RestoreHistoricalRiskAsync(match).ConfigureAwait(false);
 
             EnqueueOnUI(() =>
             {

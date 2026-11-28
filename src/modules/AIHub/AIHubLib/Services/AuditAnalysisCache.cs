@@ -14,15 +14,18 @@ public sealed partial class AuditAnalysisCache
 {
     private readonly object _gate = new();
     private readonly string? _path;
+    private readonly Func<DateTime> _utcNow;
     private string _scope = string.Empty;
     private string[] _identities = [];
     private string[] _contexts = [];
     private DateTime?[] _eventTimes = [];
+    private DateTime[] _cachedAtUtc = [];
     private List<AuditIssue> _issues = [];
     private string _usedModel = string.Empty;
     private string _usedRoute = string.Empty;
     private bool _loaded;
     public const int MaximumEvents = 400;
+    public const int RetentionDays = 30;
     private const int MaximumBytes = 8 * 1024 * 1024;
     private const int SnapshotVersion = 3;
     private static readonly TimeSpan CorrelationWindow = TimeSpan.FromMinutes(5);
@@ -30,7 +33,11 @@ public sealed partial class AuditAnalysisCache
     [GeneratedRegex(@"(?<![A-Za-z0-9_-])item-[0-9]+(?![A-Za-z0-9_-])", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex NarrativeReferencePattern();
 
-    public AuditAnalysisCache(string? path = null) => _path = path;
+    public AuditAnalysisCache(string? path = null, Func<DateTime>? utcNow = null)
+    {
+        _path = path;
+        _utcNow = utcNow ?? (() => DateTime.UtcNow);
+    }
 
     public AuditAnalysisPlan Prepare(string scope, IReadOnlyList<string> fingerprints, IReadOnlyList<string> contexts, bool force,
         IReadOnlyList<DateTime?>? eventTimes = null, IReadOnlyList<string>? summaries = null)
@@ -39,7 +46,7 @@ public sealed partial class AuditAnalysisCache
             || (eventTimes is not null && fingerprints.Count != eventTimes.Count)
             || (summaries is not null && fingerprints.Count != summaries.Count))
             throw new ArgumentException("The analysis evidence window is invalid.");
-        var times = eventTimes?.Select(time => time?.ToUniversalTime()).ToArray() ?? new DateTime?[fingerprints.Count];
+        var times = eventTimes?.Select(time => time is { } value ? (DateTime?)Utc(value) : null).ToArray() ?? new DateTime?[fingerprints.Count];
         var duplicates = new Dictionary<string, int>(StringComparer.Ordinal);
         var identities = fingerprints.Select(value =>
         {
@@ -50,6 +57,8 @@ public sealed partial class AuditAnalysisCache
         lock (_gate)
         {
             Load();
+            var now = Utc(_utcNow());
+            if (PruneExpired(now)) Save();
             var current = identities.Select((identity, index) => (identity, index)).ToDictionary(item => item.identity, item => item.index, StringComparer.Ordinal);
             var previous = _identities.ToHashSet(StringComparer.Ordinal);
             var changedContexts = new HashSet<string>(StringComparer.Ordinal);
@@ -125,8 +134,10 @@ public sealed partial class AuditAnalysisCache
                 }
             }
             bool sameScope = !force && string.Equals(scope, _scope, StringComparison.Ordinal);
+            var retained = _identities.Select((identity, index) => (identity, index)).ToDictionary(item => item.identity, item => _cachedAtUtc[item.index], StringComparer.Ordinal);
             return new(scope, identities, contexts.ToArray(), Enumerable.Range(0, identities.Length).Where(index => changedContexts.Contains(contexts[index])).ToArray(), reused, times,
-                sameScope ? _usedModel : string.Empty, sameScope ? _usedRoute : string.Empty);
+                sameScope ? _usedModel : string.Empty, sameScope ? _usedRoute : string.Empty,
+                identities.Select(identity => retained.GetValueOrDefault(identity, now)).ToArray());
         }
     }
 
@@ -134,6 +145,10 @@ public sealed partial class AuditAnalysisCache
     {
         lock (_gate)
         {
+            if (plan.Identities.Length != plan.Contexts.Length || plan.Identities.Length > MaximumEvents
+                || (plan.EventTimes is not null && plan.EventTimes.Length != plan.Identities.Length)
+                || (plan.CachedAtUtc is not null && plan.CachedAtUtc.Length != plan.Identities.Length))
+                throw new ArgumentException("The analysis evidence window is invalid.", nameof(plan));
             if (completedIssues.Any(issue => issue is null || issue.RelatedEventRefs is null
                 || References(issue).Any(reference => Parse(reference, plan.Identities.Length) < 0)))
                 throw new ArgumentException("The analysis references evidence outside its window.", nameof(completedIssues));
@@ -142,9 +157,13 @@ public sealed partial class AuditAnalysisCache
             _identities = plan.Identities;
             _contexts = plan.Contexts;
             _eventTimes = plan.EventTimes ?? new DateTime?[plan.Identities.Length];
+            var now = Utc(_utcNow());
+            _cachedAtUtc = plan.CachedAtUtc ?? Enumerable.Repeat(now, plan.Identities.Length).ToArray();
             _issues = projected;
             _usedModel = usedModel;
             _usedRoute = usedRoute;
+            _loaded = true;
+            PruneExpired(now);
             Save();
         }
     }
@@ -153,6 +172,7 @@ public sealed partial class AuditAnalysisCache
     {
         if (_loaded || _path is null) return;
         _loaded = true;
+        bool valid = false;
         try
         {
             using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -160,6 +180,7 @@ public sealed partial class AuditAnalysisCache
             var snapshot = JsonSerializer.Deserialize(stream, AIHubLibJsonContext.Default.AuditAnalysisSnapshot);
             if (snapshot is null || snapshot.Version != SnapshotVersion || snapshot.Identities is null || snapshot.Contexts is null || snapshot.Issues is null
                 || snapshot.EventTimes is null || snapshot.EventTimes.Length != snapshot.Identities.Length
+                || (snapshot.CachedAtUtc is not null && snapshot.CachedAtUtc.Length != snapshot.Identities.Length)
                 || snapshot.Identities.Length > MaximumEvents || snapshot.Identities.Length != snapshot.Contexts.Length
                 || snapshot.Identities.Distinct(StringComparer.Ordinal).Count() != snapshot.Identities.Length
                 || snapshot.Identities.Any(string.IsNullOrWhiteSpace) || snapshot.Contexts.Any(value => value is null)
@@ -169,23 +190,82 @@ public sealed partial class AuditAnalysisCache
             _identities = snapshot.Identities;
             _contexts = snapshot.Contexts;
             _eventTimes = snapshot.EventTimes;
+            var saved = Utc(snapshot.SavedAtUtc ?? File.GetLastWriteTimeUtc(_path));
+            _cachedAtUtc = snapshot.CachedAtUtc?.Select(Utc).ToArray() ?? Enumerable.Repeat(saved, snapshot.Identities.Length).ToArray();
             _issues = snapshot.Issues;
             _usedModel = snapshot.UsedModel ?? string.Empty;
             _usedRoute = snapshot.UsedRoute ?? string.Empty;
+            valid = true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
             // The cache is optional. Missing or invalid data causes a full analysis.
         }
+        finally
+        {
+            if (!valid)
+            {
+                try
+                {
+                    if (File.Exists(_path) && File.GetLastWriteTimeUtc(_path) < Utc(_utcNow()).AddDays(-RetentionDays)) DeleteSavedCache();
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+            }
+        }
+    }
+
+    private bool PruneExpired(DateTime now)
+    {
+        var cutoff = now.AddDays(-RetentionDays);
+        var removed = _eventTimes.Select((time, index) => Utc(time ?? _cachedAtUtc[index]) < cutoff).ToArray();
+        if (!removed.Any(value => value)) return false;
+
+        // A retained half of an expired evidence chain is not proof of the same
+        // finding. Invalidate only its connected contexts, then recheck those on
+        // the next request while unrelated recent providers stay incremental.
+        var invalidContexts = Enumerable.Range(0, _identities.Length).Where(index => removed[index])
+            .Select(index => _contexts[index]).ToHashSet(StringComparer.Ordinal);
+        bool changed;
+        do
+        {
+            changed = false;
+            foreach (var issue in _issues)
+            {
+                var indices = References(issue).Select(reference => Parse(reference, _identities.Length)).ToArray();
+                if (indices.Any(index => index < 0 || removed[index] || invalidContexts.Contains(_contexts[index])))
+                {
+                    foreach (int index in indices.Where(index => index >= 0)) changed |= invalidContexts.Add(_contexts[index]);
+                }
+            }
+        } while (changed);
+        var kept = Enumerable.Range(0, _identities.Length).Where(index => !removed[index] && !invalidContexts.Contains(_contexts[index])).ToArray();
+        var map = kept.Select((oldIndex, newIndex) => (oldIndex, newIndex)).ToDictionary(item => item.oldIndex, item => item.newIndex);
+        _issues = _issues.Where(issue => References(issue).All(reference => map.ContainsKey(Parse(reference, _identities.Length))))
+            .Select(issue => Project(issue, reference => Reference(map[Parse(reference, _identities.Length)]))).ToList();
+        _identities = kept.Select(index => _identities[index]).ToArray();
+        _contexts = kept.Select(index => _contexts[index]).ToArray();
+        _eventTimes = kept.Select(index => _eventTimes[index]).ToArray();
+        _cachedAtUtc = kept.Select(index => _cachedAtUtc[index]).ToArray();
+        if (_identities.Length == 0)
+        {
+            _usedModel = _usedRoute = string.Empty;
+        }
+        return true;
     }
 
     private void Save()
     {
         if (_path is null) return;
+        if (_identities.Length == 0)
+        {
+            DeleteSavedCache();
+            return;
+        }
         string temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new AuditAnalysisSnapshot(SnapshotVersion, _scope, _identities, _contexts, _issues, _eventTimes, _usedModel, _usedRoute), AIHubLibJsonContext.Default.AuditAnalysisSnapshot);
+            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new AuditAnalysisSnapshot(SnapshotVersion, _scope, _identities, _contexts, _issues, _eventTimes, _usedModel, _usedRoute,
+                Utc(_utcNow()), _cachedAtUtc), AIHubLibJsonContext.Default.AuditAnalysisSnapshot);
             if (bytes.Length > MaximumBytes) return;
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             File.WriteAllBytes(temporary, bytes);
@@ -201,6 +281,18 @@ public sealed partial class AuditAnalysisCache
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
         }
     }
+
+    private void DeleteSavedCache()
+    {
+        if (_path is null) return;
+        try { File.Delete(_path); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ManagedCommon.Logger.LogWarning("Expired AI audit cache could not be removed; it will not be reused.");
+        }
+    }
+
+    private static DateTime Utc(DateTime time) => time.Kind == DateTimeKind.Local ? time.ToUniversalTime() : DateTime.SpecifyKind(time, DateTimeKind.Utc);
 
     public static AuditIssue Project(AuditIssue issue, Func<string, string> map) => new AuditIssueEnhanced(issue)
     {
@@ -275,9 +367,11 @@ public sealed partial class AuditAnalysisCache
         && int.TryParse(reference.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int number) && number > 0 && number <= count ? number - 1 : -1;
 }
 
-public sealed record AuditAnalysisSnapshot(int Version, string Scope, string[] Identities, string[] Contexts, List<AuditIssue> Issues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "");
+public sealed record AuditAnalysisSnapshot(int Version, string Scope, string[] Identities, string[] Contexts, List<AuditIssue> Issues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "",
+    DateTime? SavedAtUtc = null, DateTime[]? CachedAtUtc = null);
 
-public sealed record AuditAnalysisPlan(string Scope, string[] Identities, string[] Contexts, int[] RequestedIndices, List<AuditIssue> ReusedIssues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "")
+public sealed record AuditAnalysisPlan(string Scope, string[] Identities, string[] Contexts, int[] RequestedIndices, List<AuditIssue> ReusedIssues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "",
+    DateTime[]? CachedAtUtc = null)
 {
     public AuditIssue RestoreReference(AuditIssue issue) => AuditAnalysisCache.Project(issue, reference =>
     {

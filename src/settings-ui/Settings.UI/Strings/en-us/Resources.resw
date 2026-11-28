@@ -2798,7 +2798,7 @@
     <value>Task policy content</value>
   </data>
   <data name="AIHub_FastScanLabel" xml:space="preserve">
-    <value>Fast scan</value>
+    <value>Quick refresh</value>
   </data>
   <data name="AIHub_FullScanLabel" xml:space="preserve">
     <value>Full scan</value>
@@ -3173,16 +3173,16 @@
     <value>Full mode needs elevation; the Security channel is unreadable without it</value>
   </data>
   <data name="AIHub_FullScanRangeHint" xml:space="preserve">
-    <value>Select a time range and refresh local findings</value>
+    <value>Select a period to load its findings automatically</value>
   </data>
   <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
     <value>2D · 2 days</value>
   </data>
   <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
-    <value>1W · 1 week</value>
+    <value>7D · 7 days</value>
   </data>
   <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
-    <value>1M · 30 days</value>
+    <value>30D · 30 days</value>
   </data>
   <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
     <value>Scan options</value>
@@ -4761,5 +4761,104 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   </data>
   <data name="Dashboard_UpdateTitle.Text" xml:space="preserve">
     <value>Kit Update</value>
+  </data>
+  <data name="AIHub_ReportDetails" xml:space="preserve">
+    <value>Complete findings and action plans</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisTitle" xml:space="preserve">
+    <value>System diagnosis</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisAction" xml:space="preserve">
+    <value>Analyze system</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisDescription" xml:space="preserve">
+    <value>Review storage, CPU and memory samples, startup entries and saved audit findings. The report includes suggested checks, tradeoffs and verification steps.</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisCollecting" xml:space="preserve">
+    <value>Collecting system evidence…</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisAnalyzing" xml:space="preserve">
+    <value>Analyzing system evidence…</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisComplete" xml:space="preserve">
+    <value>System diagnosis complete. Review the report before choosing any changes.</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisFailed" xml:space="preserve">
+    <value>AI diagnosis could not finish ({0}). The previous report is retained when available.</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisCancelled" xml:space="preserve">
+    <value>Diagnosis cancelled. The previous report is retained.</value>
+  </data>
+  <data name="FindingDetails_CheckFirst" xml:space="preserve">
+    <value>1 · Check and decide</value>
+  </data>
+  <data name="FindingDetails_ConditionalAction" xml:space="preserve">
+    <value>2 · Choose the matching action</value>
+  </data>
+  <data name="FindingDetails_VerifyResult" xml:space="preserve">
+    <value>3 · Verify the result</value>
+  </data>
+  <data name="FindingDetails_RiskRecovery" xml:space="preserve">
+    <value>Before changing anything · Impact and recovery</value>
+  </data>
+  <data name="FindingDetails_PlanBasis" xml:space="preserve">
+    <value>Follow the conditions below; the audit has not executed these steps.</value>
+  </data>
+  <data name="FindingDetails_LocalGuide" xml:space="preserve">
+    <value>Local diagnostic guide for this saved event. Confirm the cause before choosing a repair.</value>
+  </data>
+  <data name="FindingDetails_PreviousAdvice" xml:space="preserve">
+    <value>Previously recorded advice</value>
+  </data>
+  <data name="NetMap_MapNavigationHint" xml:space="preserve">
+    <value>Drag to pan · Ctrl + wheel to zoom</value>
+  </data>
+  <data name="NetMap_MapScaleHint" xml:space="preserve">
+    <value>Approximate distance at the map center</value>
+  </data>
+  <data name="AIHub_FullScan_Loading" xml:space="preserve">
+    <value>Reading Windows logs throughout the selected period…</value>
+  </data>
+  <data name="AIHub_QuickRefresh_Loading" xml:space="preserve">
+    <value>Reusing collected events and reading missing intervals and the recent tail…</value>
+  </data>
+  <data name="AIHub_FullScan_Hint" xml:space="preserve">
+    <value>Full scan rereads the selected period, then updates the audit with the current AI model.</value>
+  </data>
+  <data name="AIHub_FullScan_NoEvents" xml:space="preserve">
+    <value>Log collection finished with no events to analyze. AI did not run.</value>
+  </data>
+  <data name="AIHub_FullScan_AiUnavailable" xml:space="preserve">
+    <value>Log collection finished, but AI did not run because the AI service is unavailable. Configure or enable it, then retry the AI report.</value>
+  </data>
+  <data name="AIHub_FullScan_PreviousReport" xml:space="preserve">
+    <value> The previous complete AI report remains available.</value>
+  </data>
+  <data name="AIHub_QuickRefresh_Hint" xml:space="preserve">
+    <value>Quick refresh reuses collected events and reads missing intervals and the recent tail.</value>
+  </data>
+  <data name="AIHub_AuditScan_HistoricalWindowFormat" xml:space="preserve">
+    <value>Historical window ends {0:g}. Select Latest to scan up to now.</value>
+  </data>
+  <data name="AIHub_AuditScan_LiveWindow" xml:space="preserve">
+    <value>The selected period ends at the current time.</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Loading" xml:space="preserve">
+    <value>Loading selected period</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Loaded" xml:space="preserve">
+    <value>Period loaded</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Cached" xml:space="preserve">
+    <value>Cached period</value>
+  </data>
+  <data name="AIHub_AuditPeriod_CachedFormat" xml:space="preserve">
+    <value>Showing cached evidence for {0} days ({1} events).</value>
+  </data>
+  <data name="AIHub_AuditScan_ResultFormat" xml:space="preserve">
+    <value>{0} · {1} days · Read {2} events · Reused {3} · {4} interval(s) · {5:N0} ms</value>
+  </data>
+  <data name="AIHub_AuditElapsed_UnderSecond" xml:space="preserve">
+    <value>&lt; 1 s</value>
   </data>
 </root>

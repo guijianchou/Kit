@@ -46,6 +46,9 @@
                     <SolidColorBrush x:Key="NetMapGraticuleBrush" Color="#1E8CB4DA" />
                     <SolidColorBrush x:Key="NetMapLandFillBrush" Color="#FF3D4C59" />
                     <SolidColorBrush x:Key="NetMapLandStrokeBrush" Color="#FF8499AA" />
+                    <SolidColorBrush x:Key="NetMapCountryBorderBrush" Color="#FF607789" />
+                    <SolidColorBrush x:Key="NetMapGeographicTextBrush" Color="#FFE0E8EF" />
+                    <SolidColorBrush x:Key="NetMapLabelSurfaceBrush" Color="#C4172D40" />
                     <SolidColorBrush x:Key="NetMapRouteLineBrush" Color="#FF58C7FF" />
                     <SolidColorBrush x:Key="NetMapRouteGlowBrush" Color="#4258C7FF" />
                     <SolidColorBrush x:Key="NetMapRouteFlowBrush" Color="#CCF0FAFF" />
@@ -74,6 +77,9 @@
                     <SolidColorBrush x:Key="NetMapGraticuleBrush" Color="#26507AA8" />
                     <SolidColorBrush x:Key="NetMapLandFillBrush" Color="#FFF7F5EF" />
                     <SolidColorBrush x:Key="NetMapLandStrokeBrush" Color="#FF738C9C" />
+                    <SolidColorBrush x:Key="NetMapCountryBorderBrush" Color="#FFA8B6BD" />
+                    <SolidColorBrush x:Key="NetMapGeographicTextBrush" Color="#FF294958" />
+                    <SolidColorBrush x:Key="NetMapLabelSurfaceBrush" Color="#D4F7F5EF" />
                     <SolidColorBrush x:Key="NetMapRouteLineBrush" Color="#FF0067C0" />
                     <SolidColorBrush x:Key="NetMapRouteGlowBrush" Color="#330078D4" />
                     <SolidColorBrush x:Key="NetMapRouteFlowBrush" Color="#D9FFFFFF" />
@@ -99,6 +105,9 @@
                     <SolidColorBrush x:Key="NetMapGraticuleBrush" Color="{ThemeResource SystemColorGrayTextColor}" />
                     <SolidColorBrush x:Key="NetMapLandFillBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
                     <SolidColorBrush x:Key="NetMapLandStrokeBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="NetMapCountryBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="NetMapGeographicTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="NetMapLabelSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NetMapRouteLineBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NetMapRouteGlowBrush" Color="Transparent" />
                     <SolidColorBrush x:Key="NetMapRouteFlowBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
@@ -726,17 +735,31 @@
                                             BorderThickness="1"
                                             CornerRadius="{StaticResource OverlayCornerRadius}">
                                             <Grid>
-                                                <Grid x:Name="MapView" Height="268" SizeChanged="MapView_SizeChanged" AutomationProperties.AccessibilityView="Raw">
+                                                <Grid x:Name="MapView" Height="268" SizeChanged="MapView_SizeChanged" Background="Transparent" AutomationProperties.AccessibilityView="Raw"
+                                                      PointerPressed="MapView_PointerPressed" PointerMoved="MapView_PointerMoved" PointerReleased="MapView_PointerReleased"
+                                                      PointerCaptureLost="MapView_PointerCaptureLost" PointerWheelChanged="MapView_PointerWheelChanged">
                                                     <Grid.Clip><RectangleGeometry x:Name="MapViewportClip" /></Grid.Clip>
                                                     <Canvas x:Name="MapCanvas">
                                                         <Path x:Name="WorldGraticule" Stroke="{ThemeResource NetMapGraticuleBrush}" StrokeThickness="0.6" IsHitTestVisible="False" />
-                                                        <Path x:Name="WorldOutline" Fill="{ThemeResource NetMapLandFillBrush}" Stroke="{ThemeResource NetMapLandStrokeBrush}" StrokeThickness="1" IsHitTestVisible="False" />
+                                                        <Path x:Name="WorldOutline" Fill="{ThemeResource NetMapLandFillBrush}" Stroke="{ThemeResource NetMapCountryBorderBrush}" StrokeThickness="1" IsHitTestVisible="False" />
+                                                        <Path x:Name="WorldCoastline" Stroke="{ThemeResource NetMapLandStrokeBrush}" StrokeThickness="1.2" IsHitTestVisible="False" />
+                                                        <Canvas x:Name="MapLabels" IsHitTestVisible="False" />
                                                         <Canvas x:Name="MapLinesGlow" IsHitTestVisible="False" />
                                                         <Canvas x:Name="MapLines" />
                                                         <Canvas x:Name="MapPulseLayer" IsHitTestVisible="False" />
                                                         <Canvas x:Name="MapPoints" />
                                                     </Canvas>
                                                 </Grid>
+
+                                                <Border Margin="8" Padding="6,3" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"
+                                                        Style="{StaticResource NetMapFloatingOverlayStyle}">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Name="MapScaleText" FontSize="{ThemeResource KitFontSize10}" services:TypographyResources.BaseFontSize="10"
+                                                                   Foreground="{ThemeResource NetMapGeographicTextBrush}" />
+                                                        <Border x:Name="MapScaleBar" Height="4" Width="72" BorderThickness="1,0,1,1"
+                                                                HorizontalAlignment="Left" BorderBrush="{ThemeResource NetMapGeographicTextBrush}" />
+                                                    </StackPanel>
+                                                </Border>
 
                                                 <!-- Floating Map Zoom & Reset Controls (top-right) -->
                                                 <Border

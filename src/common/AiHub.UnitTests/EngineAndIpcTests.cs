@@ -302,6 +302,48 @@ public sealed class EngineAndIpcTests
     }
 
     [TestMethod]
+    [DataRow("codex", false)]
+    [DataRow("pi", false)]
+    [DataRow("codex", true)]
+    [DataRow("pi", true)]
+    public async Task RouteDeadlineOnlyChangesModelWhenTimeoutFailoverIsAllowed(string kernel, bool allowTimeoutFailover)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "timeout", fallback: true, kernel: kernel);
+        await fixture.SetResponseAsync(ValidReport);
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { TimeoutSeconds = 15, RouteTimeoutSeconds = 3, AllowTimeoutFailover = allowTimeoutFailover });
+
+        Assert.AreEqual(allowTimeoutFailover, result.IsSuccess);
+        Assert.AreEqual(allowTimeoutFailover ? AiErrorCode.None : AiErrorCode.Timeout, result.ErrorCode);
+        Assert.AreEqual(allowTimeoutFailover ? "Fallback" : "Main", result.UsedRoute);
+        Assert.AreEqual(allowTimeoutFailover ? 2 : 1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+        Assert.AreEqual(allowTimeoutFailover ? 1L : 0L, engine.Diagnostics.GetSnapshot().FallbackAttempts);
+        if (!allowTimeoutFailover)
+        {
+            Assert.AreEqual("routeDeadline", result.Diagnostics?.CancellationSource);
+            Assert.IsFalse(result.HasPartialResult);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("transport")]
+    [DataRow("transport-timeout")]
+    [DataRow("auth")]
+    public async Task DisablingDeadlineFailoverStillAllowsEndpointFailureRecovery(string scenario)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, scenario, fallback: true);
+        await fixture.SetResponseAsync(ValidReport);
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { AllowTimeoutFailover = false });
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.AreEqual("Fallback", result.UsedRoute);
+        Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
     [DataRow("codex", "auth")]
     [DataRow("pi", "auth")]
     [DataRow("codex", "forbidden")]

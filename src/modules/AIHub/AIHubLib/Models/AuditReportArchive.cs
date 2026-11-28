@@ -8,7 +8,7 @@ namespace Kit.AIHubLib.Models;
 // Raw event payloads are never added to this archive.
 public sealed class AuditReportArchive
 {
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = 3;
     public DateOnly? PrunedThrough { get; set; }
     public List<AuditArchiveDay> Days { get; set; } = new();
 }
@@ -28,7 +28,19 @@ public sealed class AuditArchiveDay
         HealthScore = scan.HealthScore,
         AnalysisOutcome = scan.AnalysisOutcome,
         UsedModel = scan.UsedModel,
-        SkippedChannels = scan.IncompleteLogs ? ["archive"] : null,
+        ScanStart = scan.ScanStart,
+        ScanEnd = scan.ScanEnd,
+        EventsScanned = scan.EventsScanned,
+        CollectionProfile = scan.CollectionProfile,
+        SkippedChannels = scan.SkippedChannels?.ToList() ?? (scan.IncompleteLogs && scan.LimitedChannels is null && !scan.EvidenceIncomplete ? ["archive"] : null),
+        LimitedChannels = scan.LimitedChannels?.ToList(),
+        EvidenceIncomplete = scan.EvidenceIncomplete,
+        AiReportSummary = scan.AiReportSummary,
+        AiReportMeta = scan.AiReportMeta,
+        AiAnalysisScope = scan.AiAnalysisScope,
+        AiEvidenceFingerprint = scan.AiEvidenceFingerprint,
+        AiAnalyzedEvents = scan.AiAnalyzedEvents,
+        AiReusedEvents = scan.AiReusedEvents,
         Findings = scan.Findings.Select(index => Findings[index]).ToList(),
     });
 }
@@ -40,5 +52,18 @@ public sealed class AuditArchiveScan
     public string? AnalysisOutcome { get; set; }
     public string UsedModel { get; set; } = string.Empty;
     public bool IncompleteLogs { get; set; }
+    public bool EvidenceIncomplete { get; set; }
+    public DateTime? ScanStart { get; set; }
+    public DateTime? ScanEnd { get; set; }
+    public int EventsScanned { get; set; }
+    public string? CollectionProfile { get; set; }
+    public List<string>? SkippedChannels { get; set; }
+    public List<string>? LimitedChannels { get; set; }
+    public string? AiReportSummary { get; set; }
+    public string? AiReportMeta { get; set; }
+    public string? AiAnalysisScope { get; set; }
+    public string? AiEvidenceFingerprint { get; set; }
+    public int AiAnalyzedEvents { get; set; }
+    public int AiReusedEvents { get; set; }
     public int[] Findings { get; set; } = Array.Empty<int>();
 }

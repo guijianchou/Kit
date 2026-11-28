@@ -103,14 +103,35 @@
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                         <Grid ColumnDefinitions="3,*">
                             <Border Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="8,0,0,8" />
-                            <StackPanel Grid.Column="1" Spacing="6" Padding="12,10">
+                            <StackPanel Grid.Column="1" Spacing="12" Padding="12,10">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                               AutomationProperties.AccessibilityView="Raw" />
                                     <TextBlock x:Uid="FindingDetails_Recommendation" services:RuntimeLocalization.Uid="FindingDetails_Recommendation" Style="{StaticResource BodyStrongTextBlockStyle}"
                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
-                                <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="PlanSourceText" TextWrapping="Wrap" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <StackPanel Spacing="6">
+                                    <TextBlock x:Name="CheckPlanLabel" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </StackPanel>
+                                <StackPanel Spacing="6">
+                                    <TextBlock x:Name="ConditionalActionLabel" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ConditionalActionText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </StackPanel>
+                                <StackPanel Spacing="6">
+                                    <TextBlock x:Name="VerificationLabel" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="VerificationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </StackPanel>
+                                <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="10">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock x:Name="RecoveryLabel" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="RecoveryText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    </StackPanel>
+                                </Border>
+                                <Expander x:Name="PreviousAdviceExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                    <TextBlock x:Name="PreviousAdviceText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </Expander>
                             </StackPanel>
                         </Grid>
                     </Border>

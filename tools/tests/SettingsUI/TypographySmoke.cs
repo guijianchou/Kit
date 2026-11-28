@@ -21,6 +21,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
@@ -133,6 +134,14 @@ internal static partial class TypographySmoke
         if (Environment.GetEnvironmentVariable("KIT_TYPOGRAPHY_SMOKE_SUITE") == "Plugins")
         {
             await RunPlugins();
+            return;
+        }
+        if (Environment.GetEnvironmentVariable("KIT_TYPOGRAPHY_SMOKE_SUITE") == "AiUsage")
+        {
+            await VerifyShellAiUsage(generalPage);
+            Require(ForbiddenMessages.Count == 0, "AI usage checks do not restart Settings or check for updates.");
+            EnsureNoWorker();
+            Require(TypographyFailures.Count == 0, "AI usage typography failures:\n" + string.Join("\n", TypographyFailures));
             return;
         }
         await CaptureShell("general-startup-full-shell.png");
@@ -444,10 +453,12 @@ internal static partial class TypographySmoke
                 InputTokens = 1200, ReportedInputRoutes = 2, OutputTokens = 0, ReportedOutputRoutes = 0,
                 CachedInputTokens = 0, ReportedCachedInputRoutes = 1, CacheWriteTokens = 0, ReportedCacheWriteRoutes = 0,
             };
-            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            var lightMetricColors = new Dictionary<string, (Windows.UI.Color Fill, Windows.UI.Color Text)>();
+            int themePass = 0;
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark, ElementTheme.Light })
             {
                 root.RequestedTheme = theme;
-                foreach (int width in new[] { 1280, 760 })
+                foreach (int width in new[] { 1280, 760, 480 })
                 {
                     App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1100));
                     navigation.IsPaneOpen = width == 1280;
@@ -467,30 +478,79 @@ internal static partial class TypographySmoke
                     Require(Element<TextBlock>(shell, "AiUsageInputCoverageText").Text == (IsChinese ? "3 次调用中有 2 次上报" : "Reported by 2 of 3 calls") &&
                         Element<TextBlock>(shell, "AiUsageOutputCoverageText").Text == (IsChinese ? "3 次调用中有 0 次上报" : "Reported by 0 of 3 calls"),
                         "Each token value shows its own reported-call coverage.");
+                    bool highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+                    var metricColors = VerifyAiUsageMetricContrast(shell, highContrast);
+                    if (themePass == 0 && width == 1280)
+                    {
+                        lightMetricColors = metricColors;
+                    }
+                    else if (themePass == 2)
+                    {
+                        Require(metricColors.All(pair => lightMetricColors.TryGetValue(pair.Key, out var original) && pair.Value == original),
+                            "Light metric fills and text colors restore after a Light/Dark/Light round trip.");
+                    }
+                    Require(content.ActualWidth <= 457 && content.ActualWidth <= Math.Max(300, root.XamlRoot.Size.Width - 30),
+                        "AI usage remains bounded by the window width, including the narrow window.");
+                    var body = Element<ScrollViewer>(shell, "AiUsageBodyScrollViewer");
+                    Require(body.ScrollableWidth <= 1 && body.ViewportWidth <= content.ActualWidth,
+                        "The usage body scrolls vertically without horizontal overflow.");
+                    foreach (string tab in new[] { "Overview", "Models", "Activity" })
+                    {
+                        var button = Element<Button>(shell, "AiUsageTab" + tab + "Button");
+                        var label = Element<TextBlock>(shell, "AiUsageTab" + tab + "Text");
+                        var bounds = label.TransformToVisual(button).TransformBounds(new Windows.Foundation.Rect(0, 0, label.ActualWidth, label.ActualHeight));
+                        Require(bounds.Left >= -1 && bounds.Right <= button.ActualWidth + 1,
+                            "The " + tab + " label stays inside its tab at narrow widths and larger fonts.");
+                    }
                     Require(!flyout.ShouldConstrainToRootBounds, "AI usage flyout detaches into a native backdrop-capable popup.");
                     Require(flyout.Placement == FlyoutPlacementMode.TopEdgeAlignedLeft, "AI usage flyout anchors on the left adjacent to the AI usage navigation item.");
                     if (Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported() || Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
                     {
                         Require(flyout.SystemBackdrop is not null, "AI usage flyout attaches a translucent system backdrop when supported.");
                     }
-                    foreach (var text in Descendants(content).OfType<TextBlock>().Where(text => text.Visibility == Visibility.Visible && !string.IsNullOrEmpty(text.Text)))
+                    foreach (var text in Descendants(content).OfType<TextBlock>().Where(text => IsVisible(text, content) && !string.IsNullOrEmpty(text.Text)))
                     {
+                        bool iconText = false;
+                        for (DependencyObject ancestor = VisualTreeHelper.GetParent(text); ancestor != null && ancestor != content; ancestor = VisualTreeHelper.GetParent(ancestor))
+                        {
+                            if (ancestor is IconElement)
+                            {
+                                iconText = true;
+                                break;
+                            }
+                        }
+                        if (iconText) continue;
                         double attached = TypographyResources.GetBaseFontSize(text);
-                        double baseline = attached > 0 ? attached :
-                            text.Name.EndsWith("CoverageText", StringComparison.Ordinal) ? 12 :
-                            RuntimeLocalization.GetUid(text) == "Shell_AiUsageTitle" ? 18 : 14;
-                        VerifyText(text, baseline, "Shell AI usage " + text.Name);
+                        bool mono = text.Name is "AiUsageTotalTokensText" or "AiUsageCacheHitRateText" or "AiUsageTasksCountValueText"
+                            or "AiUsageAvgLatencyText" or "AiUsageInputText" or "AiUsageCacheReadText" or "AiUsageOutputText" or "AiUsageLiveBannerElapsedText";
+                        if (attached > 0)
+                        {
+                            VerifyText(text, attached, "Shell AI usage " + text.Name, mono: mono);
+                        }
+                        else
+                        {
+                            // Native button text inherits its owner's typography; icon
+                            // template glyphs and authored monospace values are distinct.
+                            CheckTypography(text.FontFamily.Source == ExpectedFamily, "Usage native text retains the selected UI font.");
+                            if (NearestControl(text) is ButtonBase button && TypographyResources.GetBaseFontSize(button) > 0)
+                            {
+                                VerifyControl(button, TypographyResources.GetBaseFontSize(button), "Usage text button");
+                                CheckTypography(Near(text.FontSize, button.FontSize), "Native usage text inherits its button's font size.");
+                            }
+                        }
                         var bounds = text.TransformToVisual(content).TransformBounds(new Windows.Foundation.Rect(0, 0, text.ActualWidth, text.ActualHeight));
                         Require(bounds.Left >= -1 && bounds.Right <= content.ActualWidth + 1, "Usage text fits its flyout at " + theme + "/" + width);
                     }
-                    await CaptureShell($"shell-ai-usage-{theme}-{width}-{ActiveSize}.png", content);
-                    if (theme == ElementTheme.Light && width == 1280 && int.TryParse(Environment.GetEnvironmentVariable("KIT_SHELL_AI_USAGE_HOLD_SECONDS"), out int hold) && hold > 0)
+                    Log($"SHELL_AI_USAGE_LAYOUT: theme={theme}, pass={themePass}, requestedWidth={width}, rootWidth={root.XamlRoot.Size.Width}, popupWidth={content.ActualWidth}, highContrast={highContrast}");
+                    await CaptureShell($"shell-ai-usage-{theme}-{width}-{ActiveSize}-pass{themePass}.png", content);
+                    if (themePass == 0 && width == 1280 && int.TryParse(Environment.GetEnvironmentVariable("KIT_SHELL_AI_USAGE_HOLD_SECONDS"), out int hold) && hold > 0)
                     {
                         Log("SHELL_AI_USAGE_NATIVE_CAPTURE_READY");
                         await Task.Delay(TimeSpan.FromSeconds(Math.Min(hold, 60)));
                     }
                     await CloseUsage("The usage fixture flyout closes");
                 }
+                themePass++;
             }
         }
         finally
@@ -506,7 +566,63 @@ internal static partial class TypographySmoke
             navigation.IsPaneOpen = paneWasOpen;
             App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1100));
         }
-        Log("Shell AI usage: existing engine only, event refresh, hide/minimize/restore, detach, unknown/zero tokens and responsive flyout PASS");
+        Log("Shell AI usage: existing engine only, event refresh, hide/minimize/restore, detach, unknown/zero tokens, rendered metric contrast, theme restoration and responsive flyout PASS");
+    }
+
+    private static Dictionary<string, (Windows.UI.Color Fill, Windows.UI.Color Text)> VerifyAiUsageMetricContrast(ShellPage shell, bool highContrast)
+    {
+        static Windows.UI.Color Color(Brush brush) => brush is SolidColorBrush solid
+            ? solid.Color : throw new InvalidOperationException("Usage metric colors must resolve to solid brushes.");
+        static double Luminance(Windows.UI.Color foreground, Windows.UI.Color background)
+        {
+            double alpha = foreground.A / 255.0;
+            double Channel(byte value, byte behind)
+            {
+                double linear = ((value * alpha) + (behind * (1 - alpha))) / 255.0;
+                return linear <= 0.04045 ? linear / 12.92 : Math.Pow((linear + 0.055) / 1.055, 2.4);
+            }
+            return (0.2126 * Channel(foreground.R, background.R)) + (0.7152 * Channel(foreground.G, background.G)) + (0.0722 * Channel(foreground.B, background.B));
+        }
+        static double Contrast(Windows.UI.Color foreground, Windows.UI.Color background)
+        {
+            double text = Luminance(foreground, background);
+            double fill = Luminance(background, background);
+            return (Math.Max(text, fill) + 0.05) / (Math.Min(text, fill) + 0.05);
+        }
+
+        var colors = new Dictionary<string, (Windows.UI.Color Fill, Windows.UI.Color Text)>();
+        var glyphs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var metric in new[]
+        {
+            (Card: "AiUsageKpiTokensTile", Value: "AiUsageTotalTokensText", Icon: "AiUsageTokensMetricIcon"),
+            (Card: "AiUsageKpiCacheTile", Value: "AiUsageCacheHitRateText", Icon: "AiUsageCacheMetricIcon"),
+            (Card: "AiUsageKpiTasksTile", Value: "AiUsageTasksCountValueText", Icon: "AiUsageTasksMetricIcon"),
+            (Card: "AiUsageKpiLatencyTile", Value: "AiUsageAvgLatencyText", Icon: "AiUsageLatencyMetricIcon"),
+        })
+        {
+            var card = Element<Border>(shell, metric.Card);
+            var value = Element<TextBlock>(shell, metric.Value);
+            var icon = Element<FontIcon>(shell, metric.Icon);
+            var label = Descendants(card).OfType<TextBlock>().Single(text => RuntimeLocalization.GetUid(text)?.StartsWith("Shell_AiUsage", StringComparison.Ordinal) == true);
+            Windows.UI.Color fill = Color(card.Background);
+            Windows.UI.Color textColor = Color(value.Foreground);
+            Require(card.ActualWidth > 0 && card.ActualHeight > 0 && fill.A == 255,
+                metric.Card + " provides a rendered opaque surface independent of the desktop backdrop.");
+            Require(Contrast(textColor, fill) >= 4.5 && Contrast(Color(label.Foreground), fill) >= 4.5 && Contrast(Color(icon.Foreground), fill) >= 4.5,
+                metric.Card + " keeps the value, primary label and icon at least 4.5:1 against its actual fill.");
+            Require(card.BorderThickness.Left >= 1 && Color(card.BorderBrush) != fill && !string.IsNullOrWhiteSpace(label.Text) && glyphs.Add(icon.Glyph),
+                metric.Card + " has a visible border, a readable label and a distinct icon beyond color alone.");
+            foreach (var child in new FrameworkElement[] { label, value, icon })
+            {
+                var bounds = child.TransformToVisual(card).TransformBounds(new Windows.Foundation.Rect(0, 0, child.ActualWidth, child.ActualHeight));
+                Require(bounds.Left >= -1 && bounds.Right <= card.ActualWidth + 1 && bounds.Top >= -1 && bounds.Bottom <= card.ActualHeight + 1,
+                    metric.Card + " keeps its label, value and icon within the card.");
+            }
+            colors[metric.Card] = (fill, textColor);
+        }
+        Require(highContrast || colors.Values.Select(color => color.Fill).Distinct().Count() == 4,
+            "The four metrics retain distinct semantic surfaces outside the OS high-contrast palette.");
+        return colors;
     }
 
     private static async Task VerifySettingsHeaderLayout(GeneralPage page)
@@ -1558,7 +1674,7 @@ internal static partial class TypographySmoke
     {
         var windowRoot = (FrameworkElement)App.GetSettingsWindow().Content;
         var shell = windowRoot as ShellPage ?? Descendants(windowRoot).OfType<ShellPage>().Single();
-        var root = (Grid)shell.FindName("RootGrid");
+        var root = captureRoot as Panel ?? (Grid)shell.FindName("RootGrid");
         var background = root.Background;
         root.Background = new SolidColorBrush(shell.ActualTheme == ElementTheme.Dark ? Microsoft.UI.ColorHelper.FromArgb(255, 32, 32, 32) : Microsoft.UI.ColorHelper.FromArgb(255, 243, 243, 243));
         var target = captureRoot ?? windowRoot;

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -220,7 +220,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     private string _activityFindingsText = "0";
     private string _activeDaysText = "0";
     private string _healthAverageText = "—";
-    private string _scanTypeText = "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan");
+    private string _scanTypeText = "AIHub_FastScanLabel".GetLocalizedOrFallback("Quick refresh");
     private string _finishedText = "—";
     private string _windowText = "—";
     private string _eventCountText = "AIHub_EventCount_Zero".GetLocalizedOrFallback("0 events");
@@ -277,12 +277,10 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         }
 
         // Commands
-        FastScanCommand = new RelayCommand(() => RunAudit(fast: true), () => IsEnabled && !_isAuditing);
-        FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
+        FastScanCommand = new RelayCommand(() => RunAudit(fast: true), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
+        FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
         SelectLatestCommand = new RelayCommand(LoadRecentAudit, () => CanConfigureAudit);
-        ReanalyzeRangeCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
         DeepAnalyzeCommand = new RelayCommand(() => RunDeepAnalysis(), () => CanRunDeepAnalysis);
-        FullDeepAnalyzeCommand = new RelayCommand(() => RunDeepAnalysis(forceReanalyze: true), () => CanRunDeepAnalysis);
         CancelAuditCommand = new RelayCommand(() => _auditCts?.Cancel(), () => IsAuditing || IsAiAnalyzing);
         ResetFindingFiltersCommand = new RelayCommand(ResetFindingFilters);
         FilterHighSeverityCommand = new RelayCommand(() => SetSeverityFilter("High"));
@@ -346,6 +344,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         _statusMessage = _statusMessage.Relocalize();
         _optimizationStatusMessage = _optimizationStatusMessage.Relocalize();
         _inventoryStatusText = _inventoryStatusText.Relocalize();
+        _systemDiagnosisStatus = _systemDiagnosisStatus.Relocalize();
         foreach (var run in OptimizationHistory)
         {
             run.RefreshLocalization();
@@ -536,11 +535,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
 
             if (Set(ref _selectedAuditDate, value) && !_suppressAuditDateLoad && value.HasValue)
             {
-                if (IsAiAnalyzing)
-                {
-                    _auditCts?.Cancel();
-                    CompleteAiInterruption(_auditOverviewSnapshot, cancelled: true);
-                }
+                CancelAuditForNavigation();
+                _auditHistoricalSelection = true;
                 _ = LoadAuditForDateAsync(value.Value.LocalDateTime.Date);
             }
         }
@@ -559,7 +555,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     }
 
     public string MonthlyReportLabel => PreferChinese() ? "审计月报" : "Monthly audit report";
-    public string FullDeepAnalyzeLabel => PreferChinese() ? "重新分析全部证据" : "Reanalyze all evidence";
 
     public int HighCount
     {
@@ -594,8 +589,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     }
 
     /// <summary>
-    /// Next full scan range: 0 = 2 days, 1 = 1 week, 2 = 1 month.
-    /// Changing this draft does not replace an existing audit or start a task.
+    /// Display and next full scan range: 0 = 2 days, 1 = 1 week, 2 = 30 days.
     /// </summary>
     public int FullScanRangeIndex
     {
@@ -605,6 +599,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
             if (value is >= 0 and <= 2 && Set(ref _selectedScopeIndex, value))
             {
                 OnPropertyChanged(nameof(ScanRangeDescription));
+                OnPropertyChanged(nameof(SelectedScanRangeText));
+                OnPropertyChanged(nameof(SelectedScanHint));
+                ApplySelectedAuditRange();
             }
         }
     }
@@ -644,7 +641,10 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                     // Persisting the mode is best-effort; the next scan picks up the change.
                 }
 
-                // This configures the next scan without changing the current task or result.
+                if (_auditOverviewSnapshot is not null)
+                {
+                    ApplySelectedAuditRange();
+                }
             }
         }
     }
@@ -674,17 +674,15 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         }
     }
 
-    public string FullScanRangeHint => "AIHub_FullScanRangeHint".GetLocalizedOrFallback("Select a time range and refresh local findings");
+    public string FullScanRangeHint => "AIHub_FullScanRangeHint".GetLocalizedOrFallback("Select a period to load its findings automatically");
 
     public string RangeOption1DayLabel => "AIHub_RangeOption1DayLabel".GetLocalizedOrFallback("2d");
 
-    public string RangeOption2DaysLabel => "AIHub_RangeOption2DaysLabel".GetLocalizedOrFallback("1w");
+    public string RangeOption2DaysLabel => "AIHub_RangeOption2DaysLabel".GetLocalizedOrFallback("7d");
 
-    public string RangeOption1WeekLabel => "AIHub_RangeOption1WeekLabel".GetLocalizedOrFallback("1mo");
+    public string RangeOption1WeekLabel => "AIHub_RangeOption1WeekLabel".GetLocalizedOrFallback("30d");
 
     public string ScanOptionsLabel => "AIHub_ScanOptionsLabel".GetLocalizedOrFallback("Scan options");
-
-    public string ReanalyzeRangeHint => "AIHub_ReanalyzeRangeHint".GetLocalizedOrFallback("Reanalyze events in selected range");
 
     /// <summary>Summarizes the active scan mode; reflects the real setting, not a fixed claim.</summary>
     public string ScopeHint => IsFullAuditMode
@@ -740,12 +738,17 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
 
     // Audit Header & Action Labels
     public string SecurityAuditTitle => "AIHub_SecurityAuditTitle".GetLocalizedOrFallback("Windows Event Security Audit");
-    public string FastScanLabel => "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan");
+    public string FastScanLabel => "AIHub_FastScanLabel".GetLocalizedOrFallback("Quick refresh");
     public string FullScanLabel => "AIHub_FullScanLabel".GetLocalizedOrFallback("Full scan");
-    public string ReanalyzeLabel => "AIHub_ReanalyzeLabel".GetLocalizedOrFallback("Reanalyze selected range");
 
     /// <summary>Label for the AI deep-analysis action (runs the configured kernel).</summary>
-    public string DeepAnalyzeLabel => "AIHub_DeepAnalyzeLabel".GetLocalizedOrFallback("AI deep analysis");
+    public string DeepAnalyzeLabel => CurrentAuditAnalysisAction switch
+    {
+        "view" => PreferChinese() ? "查看 AI 报告" : "View AI report",
+        "update" => PreferChinese() ? "更新 AI 报告" : "Update AI report",
+        "retry" => PreferChinese() ? "重试 AI 分析" : "Retry AI analysis",
+        _ => PreferChinese() ? "生成 AI 报告" : "Generate AI report",
+    };
 
     /// <summary>Explains what the deep-analysis action does and when it is unavailable.</summary>
     public string DeepAnalyzeHint
@@ -762,6 +765,12 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 return "AIHub_DeepAnalyzeHint_Running".GetLocalizedOrFallback("An audit or AI deep analysis is already in progress.");
             }
 
+            if (CanViewCurrentAiReport)
+            {
+                return PreferChinese() ? "查看已完成的报告，不会再次请求 AI。模型或策略变化时会提示更新。"
+                    : "Open the completed report without another AI request. Changed model or policy settings require an update.";
+            }
+
             if (!IsAiUsable)
             {
                 return "AIHub_DeepAnalyzeHint_ServiceUnavailable".GetLocalizedOrFallback("Enable and configure the AI service in AI service settings before running deep analysis.");
@@ -772,8 +781,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 return "AIHub_DeepAnalyzeHint_ScanFirst".GetLocalizedOrFallback("Run a scan first to collect events for AI deep analysis.");
             }
 
-            return PreferChinese() ? "分析新增或变化的事件，复用未变化的结果。更多菜单可重新分析全部证据。"
-                : "Analyze new or changed events and reuse unchanged results. The menu offers a full review.";
+            return PreferChinese() ? "分析已收集的事件，复用未变化的结果。最多审阅 400 条；不会执行修复。"
+                : "Analyze collected evidence, reusing unchanged results. Up to 400 events are reviewed; no repairs are executed.";
         }
     }
 
@@ -979,6 +988,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 OnPropertyChanged(nameof(ShowNoAudit));
                 OnPropertyChanged(nameof(ShowEmptyIssues));
                 PublishScanProgress();
+                ResumePendingReadinessRefresh();
             }
         }
     }
@@ -1003,11 +1013,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
 
     public ICommand SelectLatestCommand { get; }
 
-    public ICommand ReanalyzeRangeCommand { get; }
-
     /// <summary>Runs the configured AI kernel over the highest-severity findings.</summary>
     public ICommand DeepAnalyzeCommand { get; }
-    public ICommand FullDeepAnalyzeCommand { get; }
 
     public ICommand CancelAuditCommand { get; }
 
@@ -1116,7 +1123,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 OnPropertyChanged(nameof(CanRunDeepAnalysis));
                 OnPropertyChanged(nameof(DeepAnalyzeHint));
                 ((RelayCommand)DeepAnalyzeCommand)?.OnCanExecuteChanged();
-                ((RelayCommand)FullDeepAnalyzeCommand)?.OnCanExecuteChanged();
             }
         }
     }
@@ -1225,29 +1231,94 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     /// </summary>
     private void RefreshAiReadinessFromCache() => _ = RefreshAiReadinessFromCacheAsync();
 
-    private async Task RefreshAiReadinessFromCacheAsync()
+    private long _readinessRefreshGeneration;
+    private Func<Task> _pendingReadinessRefresh;
+
+    private Task RefreshAiReadinessFromCacheAsync()
     {
-        if (_aiEngine is null)
+        var engine = _aiEngine;
+        if (_disposed || engine is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RefreshAiReadinessSnapshotAsync(() => Task.Run(engine.GetReadiness),
+            () => AiHubAuditAnalysisService.ReadAnalysisScopeAsync(CancellationToken.None));
+    }
+
+    private async Task RefreshAiReadinessSnapshotAsync(Func<Task<AiReadiness>> readReadiness, Func<Task<string>> readScope)
+    {
+        long generation = ++_readinessRefreshGeneration;
+        _pendingReadinessRefresh = null;
+        bool IsCurrent() => !_disposed && generation == _readinessRefreshGeneration;
+        if (!IsCurrent())
         {
             return;
         }
-
         try
         {
-            AiReadiness readiness = await Task.Run(_aiEngine.GetReadiness);
-            if (_disposed)
+            AiReadiness readiness = await readReadiness().ConfigureAwait(true);
+            if (!IsCurrent())
             {
                 return;
             }
             AiReadinessLevel = readiness.Level;
             AiReadinessText = DescribeReadiness(readiness);
             UpdateEngineAndModelInfo(readiness);
-            RefreshCommands();
+            while (HasAiReport && IsCurrent())
+            {
+                if (IsAuditing || IsAiAnalyzing)
+                {
+                    _pendingReadinessRefresh = () => IsCurrent()
+                        ? RefreshAiReadinessSnapshotAsync(readReadiness, readScope) : Task.CompletedTask;
+                    break;
+                }
+                var snapshot = _auditOverviewSnapshot;
+                string reportScope = snapshot?.AiAnalysisScope;
+                var auditOperation = _auditCts;
+                long identityGeneration = _auditIdentityGeneration;
+                string scope = await readScope().ConfigureAwait(true);
+                if (!IsCurrent())
+                {
+                    return;
+                }
+                if (IsAuditing || IsAiAnalyzing)
+                {
+                    _pendingReadinessRefresh = () => IsCurrent()
+                        ? RefreshAiReadinessSnapshotAsync(readReadiness, readScope) : Task.CompletedTask;
+                    break;
+                }
+                if (!ReferenceEquals(snapshot, _auditOverviewSnapshot) || reportScope != snapshot?.AiAnalysisScope
+                    || !ReferenceEquals(auditOperation, _auditCts) || identityGeneration != _auditIdentityGeneration)
+                {
+                    continue;
+                }
+                if (HasAiReport)
+                {
+                    RefreshAuditReportIdentity(scope);
+                }
+                break;
+            }
+            if (IsCurrent())
+            {
+                RefreshCommands();
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError("Could not read AI readiness state", ex);
         }
+    }
+
+    private void ResumePendingReadinessRefresh()
+    {
+        if (_disposed || IsAuditing || IsAiAnalyzing || _pendingReadinessRefresh is null)
+        {
+            return;
+        }
+        var pending = _pendingReadinessRefresh;
+        _pendingReadinessRefresh = null;
+        _ = pending();
     }
 
     private string _currentEngineAndModelLabel = string.Empty;
@@ -1357,7 +1428,10 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     };
 
     public string AuditElapsedText => _auditClock.HasStarted && AuditPhase != ScanPhase.Idle
-        ? AiTaskProgressText.Elapsed(_auditClock.ElapsedMilliseconds, PreferChinese()) : string.Empty;
+        ? _auditClock.ElapsedMilliseconds < 1000
+            ? "AIHub_AuditElapsed_UnderSecond".GetLocalizedOrFallback("< 1 s")
+            : AiTaskProgressText.Elapsed(_auditClock.ElapsedMilliseconds, PreferChinese())
+        : string.Empty;
 
     private void RefreshAuditElapsed()
     {
@@ -1415,7 +1489,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         _auditClock.Report(progress);
         if (progress.TotalBatches > 0)
         {
-            double percent = (_auditWasDeepAnalysis ? 0 : 30) + (_auditWasDeepAnalysis ? 95.0 : 65.0) * Math.Clamp((double)progress.CompletedBatches / progress.TotalBatches, 0, 1);
+            bool analysisOnly = _auditWasDeepAnalysis && _fullScanLogContext is null;
+            double percent = (analysisOnly ? 0 : 30) + (analysisOnly ? 95.0 : 65.0) * Math.Clamp((double)progress.CompletedBatches / progress.TotalBatches, 0, 1);
             _auditDetailedPercent = Math.Max(_auditDetailedPercent ?? 0, percent);
         }
         AuditStatusText = AiTaskProgressText.Summary(_auditClock.Progress, PreferChinese());
@@ -1486,7 +1561,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
 
     public string SidebarWorkflowTitle => AuditPhase switch
     {
-        ScanPhase.Scanning => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysis".GetLocalizedOrFallback("AI deep analysis") : "AIHub_Sidebar_Scanning".GetLocalizedOrFallback("Scanning"),
+        ScanPhase.Scanning => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysis".GetLocalizedOrFallback("AI deep analysis")
+            : _auditIsRangeNavigation ? "AIHub_AuditPeriod_Loading".GetLocalizedOrFallback("Loading selected period")
+            : "AIHub_Sidebar_Scanning".GetLocalizedOrFallback("Scanning"),
         ScanPhase.SelectingTargets when _auditIncomplete => "AIHub_Sidebar_PartiallyCompleted".GetLocalizedOrFallback("Partially completed"),
         ScanPhase.SelectingTargets => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysisComplete".GetLocalizedOrFallback("AI analysis complete") : "AIHub_Sidebar_ScanComplete".GetLocalizedOrFallback("Scan complete"),
         ScanPhase.Failed => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysisIncomplete".GetLocalizedOrFallback("AI analysis incomplete") : "AIHub_Sidebar_ScanFailed".GetLocalizedOrFallback("Scan failed"),
@@ -1770,10 +1847,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         ((RelayCommand)FastScanCommand).OnCanExecuteChanged();
         ((RelayCommand)FullScanCommand).OnCanExecuteChanged();
         ((RelayCommand)SelectLatestCommand).OnCanExecuteChanged();
-        ((RelayCommand)ReanalyzeRangeCommand).OnCanExecuteChanged();
         ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
-        ((RelayCommand)FullDeepAnalyzeCommand).OnCanExecuteChanged();
         OnPropertyChanged(nameof(DeepAnalyzeHint));
+        RefreshAuditActions();
         ((RelayCommand)CancelAuditCommand).OnCanExecuteChanged();
         ((RelayCommand)ScanAllCommand).OnCanExecuteChanged();
         ((RelayCommand)ScanDownloadsCommand).OnCanExecuteChanged();
@@ -1829,6 +1905,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 RefreshAuditCoverage();
                 RefreshCommands();
                 PublishScanProgress();
+                ResumePendingReadinessRefresh();
             }
         }
     }
@@ -1848,10 +1925,14 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
         {
             lock (_lastAuditEvents)
             {
-                return IsEnabled && !_isAuditing && !_isAiAnalyzing && (_lastAuditEvents.Count > 0 || HasAuditData) && AiHubAuditAnalysisService.IsAvailable;
+                return IsEnabled && !_isAuditing && !_isAiAnalyzing && !_checkingAuditIdentity
+                    && (CanViewCurrentAiReport || ((_lastAuditEvents.Count > 0 || HasAuditData) && _auditAiAvailable()));
             }
         }
     }
+
+    private bool CanStartDeepAnalysis => IsEnabled && !_isAuditing && !_isAiAnalyzing && !_checkingAuditIdentity
+        && (GetCachedAuditEventCount() > 0 || HasAuditData) && _auditAiAvailable();
 
     public string AiStatusText
     {
@@ -1963,918 +2044,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     /// Sends the audited events to the sandboxed "security-audit" AI chain and
     /// surfaces the advisory issues in the Security Audit tab.
     /// </summary>
-    private void RunDeepAnalysis(bool forceReanalyze = false)
-    {
-        if (!CanRunDeepAnalysis)
-        {
-            Logger.LogInfo(
-                $"AI deep analysis skipped: force={forceReanalyze}, enabled={IsEnabled}, auditing={_isAuditing}, " +
-                $"analyzing={_isAiAnalyzing}, hasAuditData={HasAuditData}, cachedEvents={GetCachedAuditEventCount()}, " +
-                $"aiAvailable={AiHubAuditAnalysisService.IsAvailable}");
-            return;
-        }
-
-        List<SecurityEvent> events;
-        lock (_lastAuditEvents)
-        {
-            events = _lastAuditEvents.ToList();
-        }
-
-        bool needsEventCollection = events.Count == 0;
-        var snapshot = _auditOverviewSnapshot;
-        List<AuditIssueEnhanced> initialRuleIssues = needsEventCollection ? [] : RunRuleBasedAuditAnalysis(events);
-
-        Logger.LogInfo(
-            $"AI deep analysis started: force={forceReanalyze}, mode={(needsEventCollection ? "recollect-snapshot" : "cached-events")}, " +
-            $"cachedEvents={events.Count}, hasSnapshot={snapshot is not null}");
-
-        _auditProgress.Reset();
-        _auditWasDeepAnalysis = true;
-        _auditIncomplete = false;
-        _fluentAiReportPartial = false;
-        _aiReportFindings.Clear();
-        HasAiReport = false;
-        AiReportSummaryText = AiReportMetaText = string.Empty;
-        _auditMergedSummary = string.Empty;
-        AiAnalysisRanText = string.Empty;
-        _persistCurrentAudit = snapshot is not null;
-        IsAiAnalyzing = true;
-        AuditPhase = ScanPhase.Scanning;
-        if (needsEventCollection)
-        {
-            BeginStage("Collect event logs", audit: true);
-            AiStatusText = "AIHub_DeepAnalysis_Recollecting".GetLocalizedOrFallback("Collecting Windows events from this audit window for AI deep analysis...");
-        }
-        else
-        {
-            EndStage("Collect event logs", audit: true);
-            BeginStage("Analyze findings", audit: true);
-            AiStatusText = "AIHub_DeepAnalysis_Requesting".GetLocalizedOrFallback("Requesting AI deep analysis...");
-        }
-
-        AuditStatusText = AiStatusText;
-        FinishedText = string.Empty;
-        if (snapshot is not null)
-        {
-            snapshot.AnalysisOutcome = "pending";
-        }
-        RefreshAuditCoverage();
-        FinishAuditStatus(HealthScore, AllIssues.Count, "pending", snapshot?.SkippedChannels ?? []);
-
-        _auditCts?.Cancel();
-        _auditCts?.Dispose();
-        _auditCts = new CancellationTokenSource();
-        CancellationToken token = _auditCts.Token;
-        var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
-        int rangeDays = _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
-        int publishedBatches = 0;
-        bool IsCurrent() => _auditCts?.Token == token && ReferenceEquals(snapshot, _auditOverviewSnapshot);
-        var collectionProgress = new Progress<EventCollectionProgress>(update => EnqueueOnUI(() =>
-        {
-            if (IsCurrent() && IsAiAnalyzing && _auditProgress.CurrentStage == "Collect event logs")
-            {
-                ApplyAuditCollectionProgress(update);
-                AiStatusText = AuditStatusText;
-            }
-        }, token));
-        var progress = new Progress<AiTaskProgress>(update => EnqueueOnUI(() =>
-        {
-            if (IsCurrent() && IsAiAnalyzing && AuditPhase == ScanPhase.Scanning)
-            {
-                ApplyAuditAiProgress(update);
-            }
-        }, token));
-        List<AuditIssueEnhanced> ruleIssues = initialRuleIssues;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                if (needsEventCollection)
-                {
-                    DateTime windowTo = snapshot?.ScanEnd?.ToUniversalTime() ?? DateTime.UtcNow;
-                    DateTime windowFrom = snapshot?.ScanStart?.ToUniversalTime() ?? windowTo.AddDays(-rangeDays);
-                    if (windowFrom >= windowTo)
-                    {
-                        windowTo = DateTime.UtcNow;
-                        windowFrom = windowTo.AddDays(-rangeDays);
-                    }
-
-                    var eventLogService = new EventLogService();
-                    events = await eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, 5000, collectionProgress, token).ConfigureAwait(false);
-                    token.ThrowIfCancellationRequested();
-
-                    if (events.Count == 0)
-                    {
-                        Logger.LogInfo("AI deep analysis re-collection found 0 events in the snapshot window.");
-                        EnqueueOnUI(() =>
-                        {
-                            if (!IsCurrent())
-                            {
-                                return;
-                            }
-
-                            string message = "AIHub_DeepAnalysis_NoEventsInWindow".GetLocalizedOrFallback("No Windows events remain in this audit window. Run a new scan first.");
-                            AiStatusText = AuditStatusText = AiAnalysisRanText = message;
-                            _auditIncomplete = false;
-                            EndStage("Collect event logs", audit: true);
-                            EndStage("Analyze findings", audit: true);
-                            EndStage("Finish", audit: true);
-                            AuditPhase = ScanPhase.SelectingTargets;
-                            FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-                            if (snapshot is not null)
-                            {
-                                snapshot.AnalysisOutcome = "skipped";
-                            }
-                            IsAiAnalyzing = false;
-                            RefreshAuditCoverage();
-                            ShowStatus(message, InfoBarSeverity.Warning);
-                        }, token);
-                        return;
-                    }
-
-                    ruleIssues = RunRuleBasedAuditAnalysis(events);
-                    var collectedEvents = events;
-                    EnqueueOnUI(() =>
-                    {
-                        if (!IsCurrent() || !IsAiAnalyzing)
-                        {
-                            return;
-                        }
-
-                        lock (_lastAuditEvents)
-                        {
-                            _lastAuditEvents.Clear();
-                            _lastAuditEvents.AddRange(collectedEvents);
-                        }
-
-                        if (snapshot is not null)
-                        {
-                            snapshot.EventsScanned = collectedEvents.Count;
-                        }
-
-                        EventCountText = "AIHub_EventCountFormat".FormatLocalized("{0} events", collectedEvents.Count);
-                        EndStage("Collect event logs", audit: true);
-                        BeginStage("Analyze findings", audit: true);
-                        AiStatusText = AuditStatusText = "AIHub_DeepAnalysis_Requesting".GetLocalizedOrFallback("Requesting AI deep analysis...");
-                    }, token);
-                }
-
-                var partialResults = new Progress<AiHubAuditAnalysisService.AuditAnalysisResult>(result => EnqueueOnUI(() =>
-                {
-                    if (IsCurrent() && IsAiAnalyzing && result.ValidatedBatchCount > publishedBatches)
-                    {
-                        publishedBatches = result.ValidatedBatchCount;
-                        ApplyAiAnalysis(result, ruleIssues, events, snapshot, interim: true);
-                    }
-                }, token));
-
-                var result = await AiHubAuditAnalysisService.AnalyzeEventsAsync(events, progress, partialResults, _incrementalAiCache, forceReanalyze, token).ConfigureAwait(false);
-                token.ThrowIfCancellationRequested();
-                EnqueueOnUI(() =>
-                {
-                    if (!IsCurrent())
-                    {
-                        return;
-                    }
-                    ApplyAiAnalysis(result, ruleIssues, events, snapshot, interim: false);
-                    IsAiAnalyzing = false;
-                    PersistCurrentAudit();
-                }, token);
-            }
-            catch (OperationCanceledException)
-            {
-                EnqueueOnUI(() =>
-                {
-                    if (!IsCurrent())
-                    {
-                        return;
-                    }
-                    CompleteAiInterruption(snapshot, cancelled: true);
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"AI analysis failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
-                EnqueueOnUI(() =>
-                {
-                    if (!IsCurrent())
-                    {
-                        return;
-                    }
-                    CompleteAiInterruption(snapshot, cancelled: false);
-                });
-            }
-            finally
-            {
-                EnqueueOnUI(() =>
-                {
-                    if (!IsCurrent())
-                    {
-                        return;
-                    }
-                    if (token.IsCancellationRequested && IsAiAnalyzing)
-                    {
-                        CompleteAiInterruption(snapshot, cancelled: true);
-                    }
-                    IsAiAnalyzing = false;
-                });
-            }
-        });
-    }
-
-    private void RunAudit(bool fast, bool rangeRefresh = false)
-    {
-        if (!IsEnabled || IsAuditing)
-        {
-            return;
-        }
-
-        // Claim the slot before cancelling anything: setting the flag afterwards left a
-        // window where two rapid clicks both passed the guard, and the second run then
-        // cancelled the first mid-collection and reported an empty audit.
-        if (IsAiAnalyzing)
-        {
-            CompleteAiInterruption(_auditOverviewSnapshot, cancelled: true);
-        }
-        IsAuditing = true;
-
-        // Audit progress uses its own stages so the pane shows what the audit is doing.
-        _auditProgress.Reset();
-        _auditWasDeepAnalysis = false;
-        _auditMergedSummary = string.Empty;
-        _auditIncomplete = false;
-        AiStatusText = string.Empty;
-        AiAnalysisRanText = string.Empty;
-        AuditPhase = ScanPhase.Scanning;
-        BeginStage("Collect event logs", audit: true);
-
-        _auditCts?.Cancel();
-        _auditCts?.Dispose();
-        _auditCts = new CancellationTokenSource();
-        CancellationToken token = _auditCts.Token;
-        IsAiAnalyzing = false;
-        AuditStatusText = fast ? "AIHub_RunAudit_FastInProgress".GetLocalizedOrFallback("Fast scan in progress...") : "AIHub_RunAudit_FullInProgress".GetLocalizedOrFallback("Full event audit in progress...");
-        ShowStatus(AuditStatusText, InfoBarSeverity.Informational);
-
-        // Freeze the next-scan draft before dispatching. Later edits do not change this run.
-        int rangeDays = _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
-        string rangeDescription = ScanRangeDescription;
-        int maxEvents = fast ? 500 : 5000;
-        var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
-        DateTime nowUtc = DateTime.UtcNow;
-        ScanIntent intent = fast ? ScanIntent.Fast : ScanIntent.ManualFull;
-        (DateTime windowFrom, DateTime windowTo) = AuditSchedule.ComputeWindow(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
-        bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
-        var eventLogService = new EventLogService();
-        var collectionProgress = new Progress<EventCollectionProgress>(update => EnqueueOnUI(() =>
-        {
-            if (_auditCts?.Token == token && IsAuditing && _auditProgress.CurrentStage == "Collect event logs")
-            {
-                ApplyAuditCollectionProgress(update);
-            }
-        }, token));
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                var events = await eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, collectionProgress, token);
-                token.ThrowIfCancellationRequested();
-
-                // Advance only after the work is done; completing the stage first made the
-                // progress bar claim collection was finished while it had not started.
-                EnqueueOnUI(() =>
-                {
-                    if (_auditCts?.Token != token)
-                    {
-                        return;
-                    }
-
-                    EndStage("Collect event logs", audit: true);
-                    BeginStage("Analyze findings", audit: true);
-                    AuditStatusText = "AIHub_RunAudit_CheckingLocalRulesFormat".FormatLocalized("Checking local rules for {0} events...", events.Count);
-                }, token);
-
-                // Decide up front whether the AI pass can run, and say so before spending
-                // time on it. Previously availability was an optimistic switch check, so a
-                // misconfigured route only surfaced after the whole scan had finished.
-                AiReadiness readiness = await Task.Run(() => AiHubEngine.Current.GetReadiness());
-
-                EnqueueOnUI(() =>
-                {
-                    AiReadinessText = DescribeReadiness(readiness);
-                    AiReadinessLevel = readiness.Level;
-                }, token);
-
-                Logger.LogInfo(
-                    $"Audit readiness: level={readiness.Level}, kernel={readiness.ActiveKernel}, " +
-                    $"cached={readiness.FromCache}, detail={readiness.Detail ?? "-"}");
-
-                bool aiEligible = !rangeRefresh && readiness.CanAttempt;
-
-                // Rule-based detection first: it is local, instant, and always available, so
-                // a machine with AI disabled still gets a usable result.
-                var ruleIssues = RunRuleBasedAuditAnalysis(events);
-                var issues = new List<AuditIssueEnhanced>(ruleIssues);
-                string aiOutcome = "skipped";
-
-                // Publish local findings before dispatching AI. The background analysis
-                // reuses this accepted snapshot and owns a separate cancellation generation.
-                bool startAi = events.Count > 0 && aiEligible;
-                aiOutcome = startAi ? "pending" : "skipped";
-
-                // Calculate health score
-                token.ThrowIfCancellationRequested();
-                int score = HealthScoreCalculator.Calculate(issues);
-
-                // Local findings are available before the separate AI run reaches a terminal state.
-                Logger.LogInfo(
-                    $"Local audit ready: type={(fast ? "fast" : "full")}, events={events.Count}, " +
-                    $"ruleFindings={ruleIssues.Count}, totalFindings={issues.Count}, healthScore={score}, " +
-                    $"ai={aiOutcome}");
-
-                EnqueueOnUI(() =>
-                {
-                    if (_auditCts?.Token != token || token.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    _auditIncomplete = false;
-                    if (!startAi)
-                    {
-                        EndStage("Analyze findings", audit: true);
-                        EndStage("Finish", audit: true);
-                        AuditPhase = ScanPhase.SelectingTargets;
-                    }
-
-                    // Only the accepted result can supply evidence to a later deep analysis.
-                    _fluentAiReportPartial = false;
-                    _aiReportFindings.Clear();
-                    HasAiReport = false;
-                    AiReportSummaryText = AiReportMetaText = string.Empty;
-                    lock (_lastAuditEvents)
-                    {
-                        _lastAuditEvents.Clear();
-                        _lastAuditEvents.AddRange(events);
-                    }
-
-                    AllIssues.Clear();
-                    foreach (var issue in issues)
-                    {
-                        AllIssues.Add(issue);
-                    }
-
-                    _hasAuditResult = true;
-                    HealthScore = score;
-                    HealthScoreGrade = score >= 80 ? "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good") : score >= 60 ? "AIHub_HealthScoreGrade_Warning".GetLocalizedOrFallback("Warning") : "AIHub_HealthScoreGrade_Critical".GetLocalizedOrFallback("Critical");
-                    HighCount = issues.Count(i => i.IsHigh);
-                    MediumCount = issues.Count(i => i.IsMedium);
-                    LowCount = issues.Count(i => i.IsLow);
-
-                    AuditTimestampText = "AIHub_AuditTimestamp_LastScannedFormat".FormatLocalized("Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)", DateTime.Now, issues.Count);
-
-                    // Update Verdict & Health Summary
-                    UpdateHealthSummary(score, HighCount, MediumCount, LowCount);
-                    OnPropertyChanged(nameof(ScheduleSummaryText));
-
-                    // Update Scan Details & Activity
-                    if (!rangeRefresh)
-                    {
-                        _lastCompletedAuditUtc = DateTime.UtcNow;
-                    }
-
-                    ScanTypeText = rangeRefresh ? "AIHub_ScanType_LocalFindings".GetLocalizedOrFallback("Local findings") : fast
-                        ? "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan")
-                        : incremental
-                            ? "AIHub_ScanType_Incremental".GetLocalizedOrFallback("Incremental audit")
-                            : "AIHub_ScanType_Full".GetLocalizedOrFallback("Full scan");
-                    FinishedText = startAi ? string.Empty : DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-
-                    // Report the window actually scanned instead of a hard-coded label; the
-                    // old text disagreed with the range the user had selected.
-                    WindowText = fast
-                        ? "AIHub_Window_Today".GetLocalizedOrFallback("Today")
-                        : rangeDescription;
-                    EventCountText = "AIHub_EventCountFormat".FormatLocalized("{0} events", events.Count);
-                    ActivityFindingsText = issues.Count.ToString(CultureInfo.InvariantCulture);
-                    SelectedAuditLabel = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    _suppressAuditDateLoad = true;
-                    try
-                    {
-                        SelectedAuditDate = DateTimeOffset.Now;
-                    }
-                    finally
-                    {
-                        _suppressAuditDateLoad = false;
-                    }
-
-                    _auditOverviewSnapshot = new AuditResult
-                    {
-                        Timestamp = DateTime.UtcNow,
-                        HealthScore = score,
-                        Findings = issues,
-                        EventsScanned = events.Count,
-                        ScanStart = windowFrom,
-                        ScanEnd = windowTo,
-                        SkippedChannels = eventLogService.SkippedChannels.ToList(),
-                        LimitedChannels = eventLogService.LimitedChannels.ToList(),
-                        AnalysisOutcome = aiOutcome,
-                    };
-                    RebuildSections();
-
-                    _persistCurrentAudit = !rangeRefresh;
-                    PersistCurrentAudit();
-                    IsAuditing = false;
-                    FinishAuditStatus(score, issues.Count, aiOutcome, eventLogService.SkippedChannels);
-                    if (startAi)
-                    {
-                        RunDeepAnalysis(forceReanalyze: false);
-                        if (!IsAiAnalyzing)
-                        {
-                            _auditOverviewSnapshot.AnalysisOutcome = "skipped";
-                            AiAnalysisRanText = "AIHub_RunAudit_AiUnavailableSkipped".GetLocalizedOrFallback("AI analysis could not start; local findings are available.");
-                            RefreshAuditCoverage();
-                            EndStage("Analyze findings", audit: true);
-                            EndStage("Finish", audit: true);
-                            AuditPhase = ScanPhase.SelectingTargets;
-                            FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-                            FinishAuditStatus(score, issues.Count, "skipped", eventLogService.SkippedChannels);
-                            _persistCurrentAudit = !rangeRefresh;
-                            PersistCurrentAudit();
-                        }
-                    }
-                    else
-                    {
-                        AiAnalysisRanText = events.Count == 0
-                            ? "AIHub_RunAudit_NoEventsAiNotCalled".GetLocalizedOrFallback("No events; AI not called")
-                            : "AIHub_RunAudit_RangeRefreshed".GetLocalizedOrFallback("Local findings refreshed; AI deep analysis is available on request");
-                        PersistCurrentAudit();
-                    }
-                }, token);
-            }
-            catch (OperationCanceledException)
-            {
-                EnqueueOnUI(() =>
-                {
-                    if (_auditCts?.Token == token)
-                    {
-                        StopAudit(cancelled: true);
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                EnqueueOnUI(() =>
-                {
-                    if (_auditCts?.Token == token)
-                    {
-                        StopAudit(cancelled: false);
-                    }
-                });
-                Logger.LogError($"Audit failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
-            }
-            finally
-            {
-                EnqueueOnUI(() =>
-                {
-                    if (_auditCts?.Token != token)
-                    {
-                        return;
-                    }
-
-                    if (token.IsCancellationRequested && AuditPhase == ScanPhase.Scanning)
-                    {
-                        StopAudit(cancelled: true);
-                    }
-
-                    IsAuditing = false;
-                    OnPropertyChanged(nameof(CanRunDeepAnalysis));
-                    OnPropertyChanged(nameof(DeepAnalyzeHint));
-                    ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
-                    ((RelayCommand)FullDeepAnalyzeCommand).OnCanExecuteChanged();
-                });
-            }
-        });
-    }
-
-    private void FinishAuditStatus(int score, int findingCount, string aiOutcome, IReadOnlyList<string> skippedChannels)
-    {
-        var presentation = DescribeAuditOutcome(aiOutcome, skippedChannels.Count > 0);
-        string message = presentation.ResourceKey.GetLocalizedOrFallback(presentation.Fallback);
-        message += "AIHub_FinishAudit_ScoreAndFindingsFormat".FormatLocalized(" Health score {0}/100; {1} finding(s).", score, findingCount);
-        if (skippedChannels.Count > 0)
-        {
-            message += "AIHub_FinishAudit_SkippedChannelsFormat".FormatLocalized(" Could not read: {0}.", string.Join(", ", skippedChannels));
-        }
-
-        AuditStatusText = message;
-        ShowStatus(message, presentation.Severity);
-    }
-
-    private void StopAudit(bool cancelled)
-    {
-        _auditProgress.Reset();
-        _auditDetailedPercent = 0;
-        AuditStatusText = cancelled ? "AIHub_StopAudit_Cancelled".GetLocalizedOrFallback("Audit cancelled") : "AIHub_StopAudit_Failed".GetLocalizedOrFallback("Audit failed");
-        AuditPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
-        IsAuditing = false;
-        PublishScanProgress();
-        ShowStatus(AuditStatusText, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Error);
-    }
-
-    private void UpdateHealthSummary(int score, int high, int medium, int low)
-    {
-        if (high > 0)
-        {
-            HealthVerdict = "AIHub_HealthVerdict_Critical".GetLocalizedOrFallback("Attention needed · Critical issues detected");
-            HealthSummaryText = "AIHub_HealthSummary_CriticalFormat".FormatLocalized("{0} high-priority issue(s) and {1} warning(s) detected. Action recommended.", high, medium);
-        }
-        else if (medium > 0)
-        {
-            HealthVerdict = "AIHub_HealthVerdict_Good".GetLocalizedOrFallback("Good · Most indicators stable");
-            HealthSummaryText = "AIHub_HealthSummary_GoodFormat".FormatLocalized("No critical failures found. Recorded {0} warning(s) and {1} info event(s).", medium, low);
-        }
-        else
-        {
-            HealthVerdict = "AIHub_HealthVerdict_Excellent".GetLocalizedOrFallback("Excellent · System fully healthy");
-            HealthSummaryText = "AIHub_HealthSummary_Excellent".GetLocalizedOrFallback("No security violations or stability anomalies detected in the scanned period.");
-        }
-
-        OnPropertyChanged(nameof(HealthVerdict));
-        OnPropertyChanged(nameof(HealthSummaryText));
-    }
-
-    /// <summary>
-    /// Combines the rule-based and AI findings. An AI finding for an event the rules already
-    /// flagged replaces it, because the AI result carries richer bilingual guidance; AI
-    /// findings for events the rules missed are appended.
-    /// </summary>
-    internal static List<AuditIssueEnhanced> MergeIssues(
-        List<AuditIssueEnhanced> ruleIssues,
-        IReadOnlyList<AuditIssue> aiIssues,
-        IReadOnlyList<SecurityEvent> events)
-    {
-        var merged = new List<AuditIssueEnhanced>(ruleIssues);
-        var enhanced = new List<AuditIssueEnhanced>();
-        var selected = events.OrderByDescending(e => e.Level is <= 2)
-            .ThenByDescending(e => e.TimeCreated ?? DateTime.MinValue)
-            .Take(AiHubAuditAnalysisService.MaxEventsPerRequest).ToArray();
-        foreach (var ai in AiHubAuditAnalysisService.DeduplicateIssues(aiIssues))
-        {
-            if (ai is null || string.IsNullOrWhiteSpace(ai.Title))
-            {
-                continue;
-            }
-
-            var finding = ToEnhanced(ai);
-
-            // The reference identifies evidence; model-authored channel/event labels do not.
-            if (ai.EventRef.StartsWith("item-", StringComparison.Ordinal)
-                && int.TryParse(ai.EventRef.AsSpan(5), out int reference) && reference > 0 && reference <= selected.Length)
-            {
-                var origin = selected[reference - 1];
-                finding.LogName = origin.LogName ?? string.Empty;
-                finding.EventId = origin.EventId.ToString(CultureInfo.InvariantCulture);
-            }
-            var matchingRules = ruleIssues.Where(issue => issue.EventId == finding.EventId &&
-                string.Equals(issue.LogName, finding.LogName, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (matchingRules.Any(issue => issue.IsHigh))
-            {
-                finding.Severity = "High";
-            }
-            else if (finding.Severity == "Low" && matchingRules.Any(issue => issue.IsMedium))
-            {
-                finding.Severity = "Medium";
-            }
-            merged.RemoveAll(issue => issue.EventId == finding.EventId &&
-                string.Equals(issue.LogName, finding.LogName, StringComparison.OrdinalIgnoreCase));
-            enhanced.Add(finding);
-        }
-        merged.AddRange(enhanced);
-        return merged;
-    }
-
-    /// <summary>
-    /// Projects an AI finding onto the shape the page displays.
-    /// </summary>
-    /// <remarks>
-    /// LogName and Category must survive the projection: the source filter matches on them,
-    /// and dropping them made AI findings disappear from the list and reset the visible
-    /// count to zero even though the analysis had returned results.
-    /// </remarks>
-    private static AuditIssueEnhanced ToEnhanced(AuditIssue ai) =>
-        new()
-        {
-            Key = ai.Key,
-            EventRef = ai.EventRef,
-            EventId = ai.EventId,
-            EventTimestamp = ai.EventTimestamp,
-            LogName = ai.LogName,
-            Category = string.IsNullOrWhiteSpace(ai.Category) ? "Other" : ai.Category,
-            Severity = ai.Severity,
-            Confidence = ai.Confidence,
-            Affected = ai.Affected ?? string.Empty,
-            Title = ai.Title,
-            TitleZh = ai.TitleZh,
-            Description = ai.Description,
-            DescriptionZh = ai.DescriptionZh,
-            RootCause = ai.RootCause,
-            RootCauseZh = ai.RootCauseZh,
-            Recommendation = ai.Recommendation,
-            RecommendationZh = ai.RecommendationZh,
-            Occurrences = ai.Occurrences,
-            RelatedEventRefs = ai.RelatedEventRefs?.ToList() ?? new List<string>(),
-            Source = string.IsNullOrWhiteSpace(ai.Source) ? "AI" : ai.Source,
-        };
-
-    private static List<AuditIssueEnhanced> RunRuleBasedAuditAnalysis(List<SecurityEvent> events)
-        => AuditRuleEngine.Analyze(events);
-
-    private void RebuildSections(bool expandMatches = false)
-    {
-        RefreshAuditSummary();
-        var previousState = FindingSections.ToDictionary(section => section.Name, section => section.IsExpanded);
-
-        // Category and event-log source describe different dimensions of a finding.
-        var sourceIssues = AllIssues.Where(issue =>
-            (_findingCategory == null || string.Equals(issue.Category ?? string.Empty, _findingCategory, StringComparison.OrdinalIgnoreCase)) &&
-            (_sourceFilter == "All" || string.Equals(issue.LogName, _sourceFilter, StringComparison.OrdinalIgnoreCase))).ToList();
-
-        // 2. Severity filter
-        var visibleIssues = _severityFilter switch
-        {
-            "High" => sourceIssues.Where(i => i.IsHigh).ToList(),
-            "Medium" => sourceIssues.Where(i => i.IsMedium).ToList(),
-            "Low" => sourceIssues.Where(i => i.IsLow).ToList(),
-            _ => sourceIssues.ToList(),
-        };
-
-        // 3. Search filter
-        if (!string.IsNullOrWhiteSpace(_findingSearchText))
-        {
-            var terms = _findingSearchText.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-            if (terms.Length > 0)
-            {
-                visibleIssues = visibleIssues.Where(issue => terms.All(term =>
-                    string.Equals(issue.EventId, term, StringComparison.OrdinalIgnoreCase) ||
-                    issue.DisplayTitle.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    issue.EvidenceSummaryText.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    issue.PriorityActionText.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    issue.Affected.Contains(term, StringComparison.OrdinalIgnoreCase))).ToList();
-            }
-        }
-
-        // 4. Group by CategoryLabel
-        var groups = visibleIssues
-            .GroupBy(issue => issue.CategoryLabel)
-            .OrderByDescending(group => group.Count(i => i.IsHigh))
-            .ThenByDescending(group => group.Count(i => i.IsMedium))
-            .ThenByDescending(group => group.Sum(i => i.Occurrences))
-            .ToList();
-
-        var sections = new List<FindingSection>();
-        foreach (var group in groups)
-        {
-            var issues = group
-                .OrderByDescending(i => i.IsHigh)
-                .ThenByDescending(i => i.IsMedium)
-                .ThenByDescending(i => i.Occurrences)
-                .ToList();
-
-            bool expanded = expandMatches || (previousState.TryGetValue(group.Key, out bool wasExpanded) ? wasExpanded : true);
-            sections.Add(new FindingSection(group.Key, issues, expanded));
-        }
-
-        FindingSections.Clear();
-        foreach (var s in sections)
-        {
-            FindingSections.Add(s);
-        }
-
-        // 5. Priority findings (top 3)
-        PriorityFindings.Clear();
-        foreach (var item in visibleIssues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).Take(3))
-        {
-            PriorityFindings.Add(item);
-        }
-
-        // 6. Filtered issues (for backward compatibility)
-        FilteredIssues.Clear();
-        foreach (var item in visibleIssues)
-        {
-            FilteredIssues.Add(item);
-        }
-
-        RebuildOverviewFindings();
-
-        // Notify properties
-        OnPropertyChanged(nameof(CanRunDeepAnalysis));
-        OnPropertyChanged(nameof(DeepAnalyzeHint));
-        ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
-        ((RelayCommand)FullDeepAnalyzeCommand).OnCanExecuteChanged();
-        OnPropertyChanged(nameof(TotalFindings));
-        OnPropertyChanged(nameof(FindingsSummaryText));
-        OnPropertyChanged(nameof(AllFindingsLabel));
-        OnPropertyChanged(nameof(PriorityPreviewLabel));
-        OnPropertyChanged(nameof(AuditPriorityFinding));
-        OnPropertyChanged(nameof(HasAuditPriority));
-        OnPropertyChanged(nameof(AuditPriorityTitle));
-        OnPropertyChanged(nameof(AuditPriorityAction));
-        OnPropertyChanged(nameof(AuditSummaryEmptyTitle));
-        OnPropertyChanged(nameof(AuditSummaryEmptyText));
-        OnPropertyChanged(nameof(ShowPriorityFindings));
-        OnPropertyChanged(nameof(ShowNoAudit));
-        OnPropertyChanged(nameof(ShowEmptyIssues));
-        OnPropertyChanged(nameof(ShowNoFilterMatches));
-        OnPropertyChanged(nameof(HasAuditData));
-        OnPropertyChanged(nameof(HealthScoreText));
-        OnPropertyChanged(nameof(HasFindingFilters));
-        OnPropertyChanged(nameof(OverviewLabel));
-        OnPropertyChanged(nameof(ApplicationLabel));
-        OnPropertyChanged(nameof(SecurityLabel));
-        OnPropertyChanged(nameof(SystemLabel));
-        OnPropertyChanged(nameof(SetupLabel));
-        OnPropertyChanged(nameof(ForwardedLabel));
-    }
-
-    private void LoadRecentAudit()
-    {
-        long generation = Interlocked.Increment(ref _auditHistoryGeneration);
-        var auditAtLoad = _auditCts;
-        var snapshotAtLoad = _auditOverviewSnapshot;
-        Task pendingWrites = _auditHistoryWriteTask;
-        Task.Run(async () =>
-        {
-            try
-            {
-                var historyList = await ReadAuditHistoryAfterWritesAsync(pendingWrites, _auditHistoryStorage.LoadHistoryAsync).ConfigureAwait(false);
-                AuditHistoryStatistics statistics = AuditHistoryStatistics.From(historyList);
-                EnqueueOnUI(() =>
-                {
-                    if (generation == _auditHistoryGeneration && !IsAuditing && !IsAiAnalyzing && _auditCts == auditAtLoad && ReferenceEquals(snapshotAtLoad, _auditOverviewSnapshot))
-                    {
-                        ApplyStatistics(statistics);
-                    }
-                });
-
-                var history = historyList.OrderByDescending(result => result.Timestamp).FirstOrDefault();
-                EnqueueOnUI(() =>
-                {
-                    if (generation != _auditHistoryGeneration || IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad || !ReferenceEquals(snapshotAtLoad, _auditOverviewSnapshot))
-                    {
-                        return;
-                    }
-                    if (history != null)
-                    {
-                        ApplyHistoricalAudit(history);
-                    }
-                    else
-                    {
-                        ClearAuditSnapshot();
-                        SelectedAuditLabel = LatestAuditLabel;
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Failed to load the most recent AI Hub audit snapshot", ex);
-            }
-        });
-    }
-
-    private void ApplyHistoricalAudit(AuditResult history)
-    {
-        ClearAuditSnapshot();
-        _auditOverviewSnapshot = history;
-        _auditIncomplete = IsIncompleteAuditOutcome(history.AnalysisOutcome);
-        if (_auditIncomplete)
-        {
-            AiAnalysisRanText = AuditStatusText = "AIHub_AuditOverviewPartialAi".GetLocalizedOrFallback(
-                "AI analysis was incomplete; this overview retains local findings and any validated AI findings.");
-            _auditDetailedPercent = null;
-            AuditPhase = ScanPhase.SelectingTargets;
-        }
-        AllIssues.Clear();
-        foreach (var issue in history.Findings)
-        {
-            AllIssues.Add(issue);
-        }
-
-        _hasAuditResult = true;
-        HealthScore = history.HealthScore;
-        HealthScoreGrade = HealthScore >= 80 ? "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good") : HealthScore >= 60 ? "AIHub_HealthScoreGrade_Warning".GetLocalizedOrFallback("Warning") : "AIHub_HealthScoreGrade_Critical".GetLocalizedOrFallback("Critical");
-        HighCount = history.HighCount;
-        MediumCount = history.MediumCount;
-        LowCount = history.LowCount;
-
-        AuditTimestampText = "AIHub_AuditTimestamp_LastScannedFormat".FormatLocalized("Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)", history.Timestamp.ToLocalTime(), history.Findings.Count);
-
-        UpdateHealthSummary(HealthScore, HighCount, MediumCount, LowCount);
-
-        ScanTypeText = "AIHub_ScanType_Historical".GetLocalizedOrFallback("Historical snapshot");
-        FinishedText = history.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-        WindowText = history.ScanStart.HasValue && history.ScanEnd.HasValue
-            ? $"{history.ScanStart.Value.ToLocalTime():g} – {history.ScanEnd.Value.ToLocalTime():g}"
-            : "AIHub_Window_AllTimes".GetLocalizedOrFallback("All times");
-        EventCountText = history.EventsScanned > 0 ? "AIHub_EventCountFormat".FormatLocalized("{0} events", history.EventsScanned)
-            : "AIHub_EventCount_HistoricalFormat".FormatLocalized("{0} findings", history.Findings.Count);
-        ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
-        SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        _suppressAuditDateLoad = true;
-        try
-        {
-            SelectedAuditDate = history.Timestamp.ToLocalTime();
-        }
-        finally
-        {
-            _suppressAuditDateLoad = false;
-        }
-
-        RebuildSections();
-        RestorePersistedAiReport(history);
-        RefreshCommands();
-    }
-
-    private void ClearAuditSnapshot()
-    {
-        _auditClock.Reset();
-        OnPropertyChanged(nameof(AuditElapsedText));
-        _auditOverviewSnapshot = null;
-        _auditMergedSummary = string.Empty;
-        AllIssues.Clear();
-        _hasAuditResult = false;
-        _auditIncomplete = false;
-        _auditWasDeepAnalysis = false;
-        _fluentAiReportPartial = false;
-        _aiReportFindings.Clear();
-        HasAiReport = false;
-        AiReportSummaryText = string.Empty;
-        AiReportMetaText = string.Empty;
-        AiStatusText = string.Empty;
-        AiAnalysisRanText = string.Empty;
-        lock (_lastAuditEvents)
-        {
-            _lastAuditEvents.Clear();
-        }
-        HealthScore = 100;
-        HighCount = MediumCount = LowCount = 0;
-        HealthScoreGrade = "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good");
-        HealthVerdict = "AIHub_HealthVerdict_NotScanned".GetLocalizedOrFallback("Not scanned yet");
-        HealthSummaryText = "AIHub_HealthSummary_NotScanned".GetLocalizedOrFallback("No audit snapshot is available for this date.");
-        AuditTimestampText = "AIHub_AuditTimestamp_NotScanned".GetLocalizedOrFallback("Not scanned yet");
-        AuditStatusText = "AIHub_AuditStatus_Ready".GetLocalizedOrFallback("Ready");
-        ScanTypeText = FinishedText = WindowText = EventCountText = string.Empty;
-        _auditProgress.Reset();
-        AuditPhase = ScanPhase.Idle;
-        RebuildSections();
-        RefreshCommands();
-    }
-
-    private async Task LoadAuditForDateAsync(DateTime localDate)
-    {
-        long generation = Interlocked.Increment(ref _auditHistoryGeneration);
-        var auditAtLoad = _auditCts;
-        try
-        {
-            var historyList = await ReadAuditHistoryAfterWritesAsync(_auditHistoryWriteTask, _auditHistoryStorage.LoadHistoryAsync).ConfigureAwait(false);
-            var match = historyList
-                .Where(h => h.Timestamp.ToLocalTime().Date == localDate)
-                .OrderByDescending(h => h.Timestamp)
-                .FirstOrDefault();
-
-            EnqueueOnUI(() =>
-            {
-                if (generation != _auditHistoryGeneration || IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad)
-                {
-                    return;
-                }
-
-                if (match != null)
-                {
-                    ApplyHistoricalAudit(match);
-                }
-                else
-                {
-                    ClearAuditSnapshot();
-                    SelectedAuditLabel = localDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    ShowStatus(
-                        ResourceExtensions.FormatLocalized(
-                            "AIHub_AuditNoSnapshotForDateFormat",
-                            "No audit snapshot found for {0:yyyy-MM-dd}.",
-                            localDate),
-                        InfoBarSeverity.Informational);
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError("Failed to load AI Hub audit snapshot for selected date", ex);
-        }
-    }
-
     // Optimization Execution (1:1 with Screenshot)
     private void ClearOptimizationCandidates(string action)
     {
@@ -3619,6 +2788,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
                 CompleteAiInterruption(_auditOverviewSnapshot, cancelled: true);
             }
             _disposed = true;
+            _readinessRefreshGeneration++;
+            _pendingReadinessRefresh = null;
             _auditClock.Dispose();
             _optimizationClock.Dispose();
             DisposeFluentView();
@@ -3631,6 +2802,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
             }
             _auditCts?.Cancel();
             _auditCts?.Dispose();
+            _auditEvidenceSession.Dispose();
             _optimizationCts?.Cancel();
             _optimizationCts?.Dispose();
         }

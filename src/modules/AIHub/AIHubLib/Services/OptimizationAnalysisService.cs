@@ -69,6 +69,7 @@ public sealed class OptimizationAnalysisService
         var groups = candidates.Select((item, index) => (item, index))
             .GroupBy(entry =>
             {
+                if (IsHostProtected(entry.item)) return $"protected:{entry.item.CacheRoot}|{entry.item.Category}|{entry.item.Action}";
                 if (entry.item.Action != "delete" || string.IsNullOrEmpty(entry.item.CacheRoot))
                 {
                     return $"file:{entry.index}";
@@ -106,7 +107,7 @@ public sealed class OptimizationAnalysisService
                 SizeInBytes = group.Sum(item => item.SizeInBytes),
                 LastModifiedUtc = group.Max(item => item.LastModified).ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
                 CategoryHint = group[0].Category,
-                AllowedAction = group[0].Action,
+                AllowedAction = IsHostProtected(group[0]) ? "skip" : group[0].Action,
             };
         }).ToList();
         var byId = inputs.ToDictionary(item => item.ItemId, StringComparer.Ordinal);
@@ -273,6 +274,10 @@ public sealed class OptimizationAnalysisService
             ? "cache-whitelist"
             : !string.IsNullOrEmpty(item.BuildManifestPath) ? "msbuild-output-list" : "project-artifact";
     }
+
+    private static bool IsHostProtected(TempFileInfo item) => item.Action == "delete"
+        ? OptimizationProtectionPolicy.IsProtectedFromCleanup(item.FilePath)
+        : OptimizationProtectionPolicy.IsSensitiveState(item.FilePath);
 
     private static string ClassifyTempResidualBucket(string ext)
     {

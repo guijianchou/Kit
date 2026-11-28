@@ -48,6 +48,10 @@ public class AuditIssue
     [JsonPropertyName("recommendation")]
     public string Recommendation { get; set; } = string.Empty;
 
+    [JsonPropertyName("remediationPlan")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AuditRemediationPlan? RemediationPlan { get; set; }
+
     [JsonPropertyName("titleZh")]
     public string TitleZh { get; set; } = string.Empty;
 

@@ -80,6 +80,7 @@ public sealed class AuditPipelineTests
         Assert.IsTrue(result.HealthScore is >= 0 and <= 100);
         Assert.IsNotNull(result.Findings);
         Assert.IsTrue(result.ScanStart <= result.ScanEnd);
+        Assert.AreEqual(AuditCollectionProfile.ForMode(EventLogService.AuditMode.Extended), result.CollectionProfile);
     }
 
     [TestMethod]

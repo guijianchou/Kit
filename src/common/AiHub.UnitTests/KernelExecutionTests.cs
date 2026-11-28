@@ -115,9 +115,25 @@ public sealed class KernelExecutionTests
                 StringAssert.Contains(config, "[agents]\nenabled = false\n");
                 StringAssert.Contains(config, "multi_agent = false\n");
                 StringAssert.Contains(config, "multi_agent_v2 = false\n");
+                StringAssert.Contains(config, "\nview_image = false\n");
+                StringAssert.Contains(config, "\ncode_mode = false\ncode_mode_only = false\n");
+                StringAssert.Contains(config, "\ncurrent_time_reminder = false\nsleep_tool = false\n");
+                StringAssert.Contains(config, "\ngoals = false\n");
+                StringAssert.Contains(config, "[tools.experimental_request_user_input]\nenabled = false\n");
+                StringAssert.Contains(config, "[tools.update_plan]\nenabled = false\n");
+                Assert.IsFalse(config.Contains("[tools]\nview_image", StringComparison.Ordinal), "view_image is a feature, not a ToolsToml setting.");
                 Assert.IsTrue(config.Contains("approval_policy = \"never\"", StringComparison.Ordinal));
                 using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
-                Assert.IsFalse(catalog.RootElement.GetProperty("models")[0].GetProperty("use_responses_lite").GetBoolean());
+                foreach (JsonElement model in catalog.RootElement.GetProperty("models").EnumerateArray())
+                {
+                    Assert.IsFalse(model.GetProperty("use_responses_lite").GetBoolean());
+                    Assert.AreEqual("direct", model.GetProperty("tool_mode").GetString());
+                    Assert.AreEqual("disabled", model.GetProperty("shell_type").GetString());
+                    Assert.AreEqual(JsonValueKind.Null, model.GetProperty("apply_patch_tool_type").ValueKind);
+                    Assert.AreEqual(0, model.GetProperty("experimental_supported_tools").GetArrayLength());
+                    Assert.IsFalse(model.GetProperty("supports_search_tool").GetBoolean());
+                }
+
                 Assert.AreEqual("capability", catalog.RootElement.GetProperty("models")[0].GetProperty("retained").GetString());
             }
             else

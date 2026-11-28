@@ -195,6 +195,8 @@ internal static class NetMapVisualSmoke
                         await Settle();
                         CheckMap(page, vm.Hops[2], name + "/zoom");
                         await Capture(page, name + "-zoom-map.png", map);
+                        if (width == 1320 && theme == ElementTheme.Light)
+                            await CheckMapNavigation(page);
                     }
                 }
             }
@@ -215,6 +217,38 @@ internal static class NetMapVisualSmoke
         Hop(2, "192.0.2.2", 31.23, 121.47, "Shanghai", "Shanghai", "CN", 64497, "Example transit and international network with a long organization name"),
         Hop(3, "2001:db8:1234:5678:9012:3456:7890:1234", 22.32, 114.17, "Hong Kong", "Hong Kong", "HK", 64498, "Example international backbone and peering organization with long ASN details"),
     };
+
+    private static async Task CheckMapNavigation(NetMapPage page)
+    {
+        var list = (ListView)page.FindName("HopList");
+        int selected = list.SelectedIndex;
+        list.SelectedIndex = -1;
+        await Settle();
+        var outline = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldOutline");
+        var geometry = outline.Data;
+        var before = ((MatrixTransform)outline.RenderTransform).Matrix;
+        typeof(NetMapPage).GetMethod("PanMap", PrivateInstance).Invoke(page, new object[] { 36.0, 12.0 });
+        await Settle();
+        var moved = ((MatrixTransform)outline.RenderTransform).Matrix;
+        Require(Math.Abs(moved.OffsetX - before.OffsetX - 36) < .01 && Math.Abs(moved.OffsetY - before.OffsetY - 12) < .01,
+            "Manual map pan translates the displayed geography.");
+        Require(ReferenceEquals(geometry, outline.Data), "Short drags reuse cached regional geometry.");
+        Require(((Canvas)page.FindName("MapLabels")).Children.Count > 0, "Unobscured regional map shows geographic labels.");
+        var map = (FrameworkElement)page.FindName("MapView");
+        var anchor = new MapPoint(map.ActualWidth * .4, map.ActualHeight * .45);
+        double worldX = (anchor.X - moved.OffsetX) / moved.M11;
+        double worldY = (anchor.Y - moved.OffsetY) / moved.M22;
+        typeof(NetMapPage).GetMethod("ZoomMap", PrivateInstance).Invoke(page, new object[] { 2.0, anchor });
+        await Settle();
+        var zoomed = ((MatrixTransform)outline.RenderTransform).Matrix;
+        Require(Math.Abs(worldX * zoomed.M11 + zoomed.OffsetX - anchor.X) < .01 && Math.Abs(worldY * zoomed.M22 + zoomed.OffsetY - anchor.Y) < .01,
+            "Map zoom preserves the geographic point beneath its pointer anchor.");
+        CheckMapStrokes(page, "manual-pan-and-pointer-zoom");
+        await Capture(page, "regional-detail-pan-zoom-map.png", map);
+        typeof(NetMapPage).GetMethod("MapZoomReset_Click", PrivateInstance).Invoke(page, new object[] { null, null });
+        list.SelectedIndex = selected;
+        await Settle();
+    }
 
     private static async Task HoldManualPreview(NetMapPage page)
     {
@@ -418,9 +452,31 @@ internal static class NetMapVisualSmoke
         var outline = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldOutline");
         var graticule = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldGraticule");
         var transform = (MatrixTransform)outline.RenderTransform;
-        Require(outline.Data is PathGeometry geometry && geometry.Figures.Count > 170, caseName + ": compiled map geometry is present.");
+        Require(outline.Data is PathGeometry geometry && geometry.Figures.Count > 0, caseName + ": compiled map geometry is present.");
         Require(Math.Abs(outline.StrokeThickness * transform.Matrix.M11 - 1) < .02 &&
             Math.Abs(graticule.StrokeThickness * transform.Matrix.M11 - .6) < .02, caseName + ": map strokes remain 1/.6 DIPs after scaling.");
+        var coastline = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldCoastline");
+        if (transform.Matrix.M11 >= 1.4)
+            Require(coastline.Data is PathGeometry coastGeometry && coastGeometry.Figures.Count > 0 &&
+                Math.Abs(coastline.StrokeThickness * transform.Matrix.M11 - 1.2) < .02, caseName + ": regional map has separate detailed coastline geometry and stable strokes.");
+        else
+            Require(coastline.Data == null, caseName + ": world overview avoids building detailed coastal shapes.");
+        var scale = (TextBlock)page.FindName("MapScaleText");
+        var bar = (Border)page.FindName("MapScaleBar");
+        Require(scale.Text.StartsWith("≈ ", StringComparison.Ordinal) && bar.Width > 0 && bar.Width <= 81,
+            caseName + ": approximate distance scale is bounded and visible.");
+        var mapLabels = ((Canvas)page.FindName("MapLabels")).Children.OfType<Border>().ToArray();
+        Require(mapLabels.Length <= 42, caseName + ": geographic label budget remains bounded.");
+        for (int i = 0; i < mapLabels.Length; i++)
+        {
+            var first = mapLabels[i].TransformToVisual(page.FindName("MapView") as UIElement).TransformBounds(new Windows.Foundation.Rect(0, 0, mapLabels[i].ActualWidth, mapLabels[i].ActualHeight));
+            for (int j = i + 1; j < mapLabels.Length; j++)
+            {
+                var second = mapLabels[j].TransformToVisual(page.FindName("MapView") as UIElement).TransformBounds(new Windows.Foundation.Rect(0, 0, mapLabels[j].ActualWidth, mapLabels[j].ActualHeight));
+                Require(first.Right <= second.Left || first.Left >= second.Right || first.Bottom <= second.Top || first.Top >= second.Bottom,
+                    caseName + ": geographic labels do not overlap.");
+            }
+        }
 
         Windows.Foundation.Rect Bounds(FrameworkElement element) =>
             element.TransformToVisual(header).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));

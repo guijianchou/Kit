@@ -94,6 +94,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
     {
         // Deactivate page-specific work while the cached page keeps its detection session.
         isCurrentPage = false;
+        mapDragPosition = null;
+        MapView.ReleasePointerCaptures();
         StopHeroPulse();
         StopMapAnimations();
         ViewModel.SetPageActive(false);
@@ -113,35 +115,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
         UpdateVisibility();
         if (!mapLoaded)
         {
-            var geometry = new PathGeometry();
-            foreach (var country in WorldMap.Countries)
-            {
-                foreach (var ring in country.Rings)
-                {
-                    if (ring.Length < 3)
-                    {
-                        continue;
-                    }
-
-                    // Adjacent world copies keep the basemap continuous when the route crosses the date line.
-                    foreach (double offset in new[] { -960.0, 0, 960 })
-                    {
-                        var start = Project(ring[0]);
-                        var figure = new PathFigure { StartPoint = new(start.X + offset, start.Y), IsClosed = true, IsFilled = true };
-                        var segment = new PolyLineSegment();
-                        for (int i = 1; i < ring.Length; i++)
-                        {
-                            var point = Project(ring[i]);
-                            segment.Points.Add(new(point.X + offset, point.Y));
-                        }
-
-                        figure.Segments.Add(segment);
-                        geometry.Figures.Add(figure);
-                    }
-                }
-            }
-
-            WorldOutline.Data = geometry;
+            overviewGeometry = BuildMapGeometry(WorldMap.Countries.SelectMany(country => country.Rings), closed: true, null);
+            WorldOutline.Data = overviewGeometry;
             WorldGraticule.Data = BuildGraticuleGeometry();
             mapLoaded = true;
         }
@@ -152,6 +127,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
+        mapDragPosition = null;
+        MapView.ReleasePointerCaptures();
+
         // Keep receiving window lifetime events while detection runs on another page.
         StopHeroPulse();
         StopMapAnimations();
@@ -230,19 +208,19 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
 
     private void MapZoomIn_Click(object sender, RoutedEventArgs e)
     {
-        userZoomFactor = Math.Clamp(userZoomFactor * 1.35, 1.0, 4.0);
-        DrawPoints();
+        ZoomMap(1.35, new(MapView.ActualWidth / 2, MapView.ActualHeight / 2));
     }
 
     private void MapZoomOut_Click(object sender, RoutedEventArgs e)
     {
-        userZoomFactor = Math.Clamp(userZoomFactor / 1.35, 1.0, 4.0);
-        DrawPoints();
+        ZoomMap(1 / 1.35, new(MapView.ActualWidth / 2, MapView.ActualHeight / 2));
     }
 
     private void MapZoomReset_Click(object sender, RoutedEventArgs e)
     {
         userZoomFactor = 1.0;
+        manualMapViewport = null;
+        renderedSnapshot = null;
         DrawPoints();
     }
 
@@ -254,7 +232,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
         }
 
         MapViewportClip.Rect = new(0, 0, e.NewSize.Width, e.NewSize.Height);
-        foreach (var layer in new[] { MapLinesGlow, MapLines, MapPulseLayer, MapPoints })
+        manualMapViewport = manualMapViewport?.Resize(e.NewSize.Width, e.NewSize.Height);
+        foreach (var layer in new[] { MapLabels, MapLinesGlow, MapLines, MapPulseLayer, MapPoints })
         {
             layer.Width = e.NewSize.Width;
             layer.Height = e.NewSize.Height;
@@ -394,12 +373,12 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
         activePulseRings.Clear();
     }
 
-    private static PathGeometry BuildGraticuleGeometry()
+    private static PathGeometry BuildGraticuleGeometry(int step = 30)
     {
         var geometry = new PathGeometry();
         foreach (double offset in new[] { -960.0, 0.0, 960.0 })
         {
-            for (int lat = -60; lat <= 60; lat += 30)
+            for (int lat = -90 + step; lat < 90; lat += step)
             {
                 double y = (90 - lat) * 480.0 / 180.0;
                 var fig = new PathFigure { StartPoint = new(offset, y), IsClosed = false, IsFilled = false };
@@ -407,7 +386,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
                 geometry.Figures.Add(fig);
             }
 
-            for (int lon = -135; lon <= 180; lon += 45)
+            for (int lon = -180 + step; lon <= 180; lon += step)
             {
                 double x = ((lon + 180) * 960.0 / 360.0) + offset;
                 var fig = new PathFigure { StartPoint = new(x, 0), IsClosed = false, IsFilled = false };
@@ -455,6 +434,13 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
         }
 
         var snapshot = ViewModel.Snapshot;
+        if (mapGeneration != snapshot.Generation)
+        {
+            mapGeneration = snapshot.Generation;
+            manualMapViewport = null;
+            userZoomFactor = 1;
+        }
+
         int selected = HopList.SelectedIndex;
         bool redraw = renderedSnapshot == null || renderedSelection != selected || Math.Abs(renderedUserZoom - userZoomFactor) > 0.001 ||
             renderedSnapshot.Generation != snapshot.Generation || renderedSnapshot.Running != snapshot.Running ||
@@ -542,7 +528,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
             {
                 int index = i;
                 bool highlight = selected == i || (targetInRoute && selected < 0);
-                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 30 : 24, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health, pulse: snapshot.Running && highlight);
+                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 30 : targetInRoute ? 24 : 20, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health, pulse: snapshot.Running && highlight);
+                Canvas.SetZIndex(marker, selected == i ? 3 : targetInRoute ? 2 : 1);
                 marker.Tapped += (_, _) => HopList.SelectedIndex = HopList.SelectedIndex == index ? -1 : index;
                 hopMarkers[i] = marker;
             }
@@ -616,11 +603,13 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
             label.SetBinding(ToolTipService.ToolTipProperty, new Binding { Source = row, Path = new PropertyPath(nameof(NetMapHopRow.Detail)), Mode = BindingMode.OneWay });
             label.SizeChanged += (_, _) => PlaceMapLabel(label, position);
             MapPoints.Children.Add(label);
+            Canvas.SetZIndex(label, 4);
             label.Measure(new Size(label.Width, label.MaxHeight));
             PlaceMapLabel(label, position);
         }
 
         MapDescription.Text = selected >= 0 && selected < ViewModel.Hops.Count ? ViewModel.Hops[selected].Detail : descriptions.Count == 0 ? NetMapViewModel.Text("MapEmpty") : string.Join("   /   ", descriptions);
+        DrawGeographicLabels(positions);
     }
 
     private static MapCoordinate EgressPosition(ChannelState channel) => channel.LastSuccess?.Identity is { } identity ? WorldMap.Locate(string.IsNullOrEmpty(identity.CountryCode) ? channel.Geography?.CountryCode ?? string.Empty : identity.CountryCode, channel.Geography) : null;
@@ -641,15 +630,19 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveL
 
     private void FitMap(IReadOnlyList<MapCoordinate> coordinates)
     {
-        mapViewport = MapViewport.Fit(coordinates, MapView.ActualWidth, MapView.ActualHeight, userZoomFactor);
+        mapViewport = manualMapViewport ?? MapViewport.Fit(coordinates, MapView.ActualWidth, MapView.ActualHeight, userZoomFactor);
+        UpdateMapDetail();
         var matrix = new Matrix(mapViewport.Scale, 0, 0, mapViewport.Scale, mapViewport.OffsetX, mapViewport.OffsetY);
         WorldOutline.RenderTransform = new MatrixTransform { Matrix = matrix };
         WorldGraticule.RenderTransform = new MatrixTransform { Matrix = matrix };
+        WorldCoastline.RenderTransform = new MatrixTransform { Matrix = matrix };
 
         // RenderTransform also scales strokes: compensate so coastlines remain
         // crisp both at world scale and when a single region is enlarged.
         WorldOutline.StrokeThickness = 1.0 / mapViewport.Scale;
         WorldGraticule.StrokeThickness = 0.6 / mapViewport.Scale;
+        WorldCoastline.StrokeThickness = 1.2 / mapViewport.Scale;
+        UpdateMapScale();
     }
 
     private void AddRouteLine(MapCoordinate from, MapCoordinate to, bool approximate)

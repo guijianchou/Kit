@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <local:NavigablePage
     x:Class="Kit.Settings.UI.Views.AIHubPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -924,6 +924,7 @@
                                     <Grid x:Name="AuditCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
                                         <tkcontrols:WrapPanel x:Name="AuditPrimaryCommands" HorizontalSpacing="10" VerticalSpacing="10" VerticalAlignment="Center">
                                             <SplitButton x:Name="AuditScanButton" Click="OnSelectedScanClick" IsEnabledChanged="OnScanButtonIsEnabledChanged" IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.SelectedScanHint, Mode=OneWay}"
                                                 Background="{ThemeResource SplitButtonBackground}"
                                                 Foreground="{ThemeResource SplitButtonForeground}"
                                                 AutomationProperties.AutomationId="AIHub_ScanButton">
@@ -1000,41 +1001,27 @@
                                                                 <ComboBoxItem Content="{x:Bind ViewModel.FastScanLabel}" />
                                                                 <ComboBoxItem Content="{x:Bind ViewModel.FullScanLabel}" />
                                                             </ComboBox>
-                                                            <ComboBox x:Uid="AIHub_Fluent_ScanRange" services:RuntimeLocalization.Uid="AIHub_Fluent_ScanRange" SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch" IsEnabled="{x:Bind ViewModel.IsFullScanSelected, Mode=OneWay}">
-                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1DayLabel}" />
-                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption2DaysLabel}" />
-                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1WeekLabel}" />
-                                                            </ComboBox>
                                                             <CheckBox x:Uid="AIHub_Fluent_FullChannels" services:RuntimeLocalization.Uid="AIHub_Fluent_FullChannels" IsChecked="{x:Bind ViewModel.IsFullAuditMode, Mode=OneWay}" Click="OnFullAuditCheckClick" IsEnabled="{x:Bind ViewModel.CanUseFullAuditMode}" />
                                                             <TextBlock Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}" TextWrapping="Wrap" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                         </StackPanel>
                                                     </Flyout>
                                                 </SplitButton.Flyout>
                                             </SplitButton>
-                                            <Border CornerRadius="4" Padding="8,5" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <FontIcon Glyph="&#xE787;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
-                                                    <TextBlock Text="{x:Bind ViewModel.SelectedScanRangeText, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" FontWeight="Medium"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
+                                            <tkcontrols:Segmented SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}"
+                                                                  IsEnabled="{x:Bind ViewModel.CanSelectAuditRange, Mode=OneWay}"
+                                                                  AutomationProperties.AutomationId="AIHub_AuditDisplayRange"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.DisplayRangeLabel}">
+                                                <tkcontrols:SegmentedItem Content="2D" />
+                                                <tkcontrols:SegmentedItem Content="7D" />
+                                                <tkcontrols:SegmentedItem Content="30D" />
+                                            </tkcontrols:Segmented>
                                             <Button Command="{x:Bind ViewModel.DeepAnalyzeCommand}" AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
                                                 ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
                                                 <StackPanel Orientation="Horizontal" Spacing="7">
                                                     <FontIcon Glyph="&#xE9D9;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" FontWeight="Medium" />
+                                                    <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontWeight="Medium" />
                                                 </StackPanel>
                                             </Button>
-                                            <DropDownButton IsEnabled="{x:Bind ViewModel.CanRunDeepAnalysis, Mode=OneWay}"
-                                                AutomationProperties.Name="{x:Bind ViewModel.FullDeepAnalyzeLabel, Mode=OneWay}">
-                                                <FontIcon Glyph="&#xE712;" FontSize="13" />
-                                                <DropDownButton.Flyout>
-                                                    <MenuFlyout>
-                                                        <MenuFlyoutItem Text="{x:Bind ViewModel.FullDeepAnalyzeLabel, Mode=OneWay}" Command="{x:Bind ViewModel.FullDeepAnalyzeCommand}" />
-                                                    </MenuFlyout>
-                                                </DropDownButton.Flyout>
-                                            </DropDownButton>
                                         </tkcontrols:WrapPanel>
                                         <DropDownButton x:Name="AuditHistoryDropDown" Grid.Column="1"
                                             IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
@@ -1059,6 +1046,10 @@
                                             </DropDownButton.Flyout>
                                         </DropDownButton>
                                     </Grid>
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedScanHint, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasAuditRangeCoverage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="{x:Bind ViewModel.AuditRangeCoverageText, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
                                     <Border x:Name="AuditHealthSummary"
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -1288,8 +1279,7 @@
                                                     </Button.Flyout>
                                                 </Button>
                                             </Grid>
-                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewNextScanHint, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Visibility="{x:Bind ViewModel.HasAuditOverviewScopeChange, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
 
 
                                         </StackPanel>
@@ -1479,9 +1469,9 @@
                                             <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="12,8">
                                                 <StackPanel Spacing="6">
                                                     <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint1, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
-                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                                     <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint2, Mode=OneWay}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
                                                                Visibility="{x:Bind ViewModel.HasAiSummaryPoint2, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 </StackPanel>
                                             </Border>
@@ -1518,7 +1508,7 @@
                                                 Visibility="{x:Bind ViewModel.ShowAiSummaryAction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE9D9;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" AutomationProperties.AccessibilityView="Raw" />
-                                                <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" FontWeight="Medium" />
+                                                <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontWeight="Medium" />
                                             </StackPanel>
                                         </Button>
 
@@ -1633,6 +1623,24 @@
                                         <TextBlock x:Name="OptimizationWorkflowStatus" Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}"
                                                    FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="OptimizationDiagnosisCard" Style="{StaticResource AiHubSectionSurfaceStyle}">
+                                <StackPanel Spacing="12">
+                                    <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="10">
+                                        <TextBlock Text="{x:Bind ViewModel.SystemDiagnosisTitle}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
+                                        <Button Content="{x:Bind ViewModel.SystemDiagnosisActionLabel}" Command="{x:Bind ViewModel.DiagnoseSystemCommand}"
+                                                AutomationProperties.AutomationId="AIHub_DiagnoseSystemButton" Style="{StaticResource KitActionButtonStyle}" />
+                                        <Button Content="{x:Bind ViewModel.CopyReportLabel}" Click="OnCopySystemDiagnosisClick"
+                                                Visibility="{x:Bind ViewModel.HasSystemDiagnosis, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Style="{StaticResource KitActionButtonStyle}" />
+                                    </tkcontrols:WrapPanel>
+                                    <TextBlock Text="{x:Bind ViewModel.SystemDiagnosisDescription}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind ViewModel.SystemDiagnosisStatus, Mode=OneWay}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <ScrollViewer MaxHeight="560" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                                                  Visibility="{x:Bind ViewModel.HasSystemDiagnosis, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="{x:Bind ViewModel.SystemDiagnosisText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                     </ScrollViewer>
                                 </StackPanel>
                             </Border>

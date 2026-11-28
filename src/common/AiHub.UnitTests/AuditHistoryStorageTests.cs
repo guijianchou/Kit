@@ -107,6 +107,43 @@ public sealed class AuditHistoryStorageTests
     }
 
     [TestMethod]
+    public async Task FinalAssessmentReplacesSameScanInHistoryAndArchiveButPreservesOtherDates()
+    {
+        var storage = new AuditHistoryStorage(_directory);
+        DateTime current = DateTime.UtcNow;
+        DateTime earlier = current.AddDays(-1);
+        storage.SaveResult(new AuditResult
+        {
+            Timestamp = earlier, AnalysisOutcome = "ok",
+            Findings = [new() { Key = "earlier", Title = "Earlier real observation", EventId = "42", LogName = "System", Severity = "High" }],
+        });
+        storage.SaveResult(new AuditResult
+        {
+            Timestamp = current, AnalysisOutcome = "skipped", HealthScore = 40,
+            Findings = [new() { Key = "local", Title = "Current rule finding", EventId = "41", LogName = "System", Severity = "High" }],
+        });
+        storage.SaveResult(new AuditResult
+        {
+            Timestamp = current, AnalysisOutcome = "ok", HealthScore = 95, AiReportSummary = "Revised final assessment",
+            Findings = [new() { Key = "ai", Title = "Reviewed current finding", EventId = "41", LogName = "System", Severity = "Low", EventRef = "item-000001" }],
+        });
+        Assert.AreEqual("Low", storage.LoadHistory().Single(scan => scan.Timestamp == current).Findings.Single().Severity);
+        storage.SaveResult(new AuditResult { Timestamp = current, AnalysisOutcome = "ok", HealthScore = 100, AiReportSummary = "No actionable finding" });
+        var history = storage.LoadHistory();
+        Assert.AreEqual(2, history.Count);
+        Assert.AreEqual(0, history.Single(scan => scan.Timestamp == current).Findings.Count);
+        Assert.AreEqual("High", history.Single(scan => scan.Timestamp == earlier).Findings.Single().Severity);
+        var archive = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(storage.ReportsDirectory, "daily-summary.json")), AIHubLibJsonContext.Default.AuditReportArchive);
+        Assert.IsNotNull(archive);
+        var archived = archive.Days.SelectMany(day => day.RestoreScans()).ToList();
+        Assert.AreEqual(2, archive.Days.Sum(day => day.Audits));
+        Assert.AreEqual(0, archived.Single(scan => scan.Timestamp == current).Findings.Count);
+        Assert.AreEqual("High", archived.Single(scan => scan.Timestamp == earlier).Findings.Single().Severity);
+        var report = await storage.LoadPeriodReportAsync(DateOnly.FromDateTime(current.ToLocalTime()), TimeZoneInfo.Local, monthly: false);
+        Assert.AreEqual("Earlier real observation", report.Issues.Single().Latest.Title);
+    }
+
+    [TestMethod]
     public void RetentionDropsExpiredSnapshots()
     {
         var storage = new AuditHistoryStorage(_directory);

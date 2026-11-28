@@ -75,6 +75,7 @@ public sealed class AuditPipeline
             ScanStart = fromUtc,
             ScanEnd = toUtc,
             EventsScanned = events.Count,
+            CollectionProfile = AuditCollectionProfile.ForMode(mode),
             SkippedChannels = _eventLogService.SkippedChannels.ToList(),
             LimitedChannels = _eventLogService.LimitedChannels.ToList(),
             AnalysisOutcome = "skipped",

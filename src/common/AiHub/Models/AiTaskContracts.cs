@@ -64,6 +64,14 @@ public sealed class AiTaskOptions
     public int RouteTimeoutSeconds { get; set; }
 
     /// <summary>
+    /// Allows an enabled fallback route to replace a main route that only exceeded
+    /// its per-route time budget. Security-sensitive audits can disable this so a
+    /// slow primary analysis is reported as incomplete instead of silently changing
+    /// model and evidence provenance.
+    /// </summary>
+    public bool AllowTimeoutFailover { get; set; } = true;
+
+    /// <summary>
     /// Maximum records per batch (1-100). Zero uses the effort-based default.
     /// The encoded input size limit still applies independently.
     /// </summary>

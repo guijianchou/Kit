@@ -23,6 +23,8 @@ public sealed class AiHubAuditEvidenceTests
     private static readonly string[] ThreeReferences = ["item-000001", "item-000002", "item-000003"];
     private static readonly string[] PrimaryReference = ["item-000001"];
     private static readonly string[] ShiftedReferences = ["item-000002", "item-000003"];
+    private static readonly int[] RemainingRetryIndices = [1, 2];
+    private static readonly int[] AllRetryIndices = [0, 1, 2];
 
     [TestMethod]
     [DataRow("pending", false, InfoBarSeverity.Informational, "AIHub_FinishAudit_Pending")]
@@ -245,22 +247,62 @@ public sealed class AiHubAuditEvidenceTests
     }
 
     [TestMethod]
-    public void ManualDeepAnalysisBypassesCompletedEvidenceCacheWhileAutomaticPassCanReuseIt()
+    public void PeriodSelectionRebuildsFromEventsAndDoesNotSliceGroupedOccurrences()
     {
-        var cached = new AiHubAuditAnalysisService.AuditAnalysisResult([Finding("item-000001", "High", 1)], false, null);
-        const string evidence = "ABC123";
+        DateTime end = new(2026, 11, 26, 12, 0, 0, DateTimeKind.Utc);
+        var events = new List<SecurityEvent>
+        {
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-1), "Recent interruption"),
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-5), "Earlier interruption"),
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-20), "Older interruption"),
+            new(41, "System", "Kernel-Power", 1, null, "Unknown time"),
+        };
+        Assert.AreEqual(1, AIHubPageViewModel.SelectAuditRangeEvents(events, end.AddDays(-2), end).Count);
+        Assert.AreEqual(2, AIHubPageViewModel.SelectAuditRangeEvents(events, end.AddDays(-7), end).Count);
+        Assert.AreEqual(3, AIHubPageViewModel.SelectAuditRangeEvents(events, end.AddDays(-30), end).Count);
+        var shortScan = new AuditResult { ScanStart = end.AddDays(-2), ScanEnd = end };
+        Assert.IsTrue(AIHubPageViewModel.CoversAuditRange(shortScan, end.AddDays(-2), end));
+        Assert.IsFalse(AIHubPageViewModel.CoversAuditRange(shortScan, end.AddDays(-7), end));
+        Assert.IsFalse(AIHubPageViewModel.CoversAuditRange(new(), end.AddDays(-2), end));
+    }
 
-        Assert.IsTrue(
-            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: false, cached, evidence, evidence),
-            "An automatic post-scan pass may reuse a completed result for identical evidence.");
-        Assert.IsFalse(
-            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: true, needsEventCollection: false, cached, evidence, evidence),
-            "An explicit click on AI deep analysis must bypass the completed evidence cache and re-run.");
-        Assert.IsFalse(
-            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: true, cached, evidence, evidence),
-            "A historical snapshot without in-memory events cannot reuse a cached analysis without collecting events.");
-        Assert.IsFalse(
-            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: false, cached, evidence, "DIFFERENT"));
+    [TestMethod]
+    public void ReportActionsDistinguishViewingUpdatingAndRetrying()
+    {
+        Assert.AreEqual("generate", AIHubPageViewModel.ResolveAuditAnalysisAction(false, false, false));
+        Assert.AreEqual("view", AIHubPageViewModel.ResolveAuditAnalysisAction(true, false, false));
+        Assert.AreEqual("update", AIHubPageViewModel.ResolveAuditAnalysisAction(true, false, true));
+        Assert.AreEqual("retry", AIHubPageViewModel.ResolveAuditAnalysisAction(true, true, false));
+    }
+
+    [TestMethod]
+    public void PartialRetrySkipsValidatedEmptyBatchesAndRejectsStaleRunCheckpoints()
+    {
+        var cache = new AuditAnalysisCache();
+        var original = cache.Prepare("scope", ["a", "b", "c"], ["A", "B", "C"], false);
+        var retry = new AiHubAuditAnalysisService.AuditAnalysisRetryState();
+        var first = retry.Prepare(original, "evidence", false);
+        retry.Checkpoint(first, "evidence", new() { Issues = [] }, new HashSet<string> { "item-000001" });
+        var second = retry.Prepare(original, "evidence", false);
+        CollectionAssert.AreEqual(RemainingRetryIndices, second.RequestedIndices);
+
+        // The old task can still unwind after cancellation; it cannot populate the new run.
+        retry.Checkpoint(first, "evidence", new() { Issues = [] }, new HashSet<string> { "item-000002" });
+        var third = retry.Prepare(original, "evidence", false);
+        CollectionAssert.AreEqual(RemainingRetryIndices, third.RequestedIndices);
+        var forced = retry.Prepare(original, "evidence", true);
+        CollectionAssert.AreEqual(AllRetryIndices, forced.RequestedIndices);
+    }
+
+    [TestMethod]
+    public void NarrativeReportsCoverageAndPriorityInsteadOfOnlyCompletionCount()
+    {
+        string text = AIHubPageViewModel.BuildAuditNarrative(
+            [new AuditIssueEnhanced { Title = "Disk errors", Severity = "High", Occurrences = 3 }], 600, 400, false);
+        StringAssert.Contains(text, "600");
+        StringAssert.Contains(text, "400");
+        StringAssert.Contains(text, "Disk errors");
+        StringAssert.Contains(text, "remaining events received local rule checks only");
     }
 
     [TestMethod]

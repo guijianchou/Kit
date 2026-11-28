@@ -856,13 +856,14 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         return Failure<TOutput>(AiErrorCode.HubDisabled, stopwatch);
                     }
 
-                    ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}, fallbackAvailable={fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl)}");
+                    ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}, allowTimeoutFailover={options.AllowTimeoutFailover}, fallbackAvailable={fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl)}");
                     string prompt = prefix + SerializeBatch(batch);
                     int promptBytes = Encoding.UTF8.GetByteCount(prompt);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
                         ReportDiagnostic, token).ConfigureAwait(false);
                     await RecordRouteAsync(execution, "Main", main, promptBytes).ConfigureAwait(false);
-                    if (!execution.IsSuccess && (execution.CanFailover || execution.ErrorCode == AiErrorCode.Timeout)
+                    if (!execution.IsSuccess && (execution.CanFailover
+                        || (execution.ErrorCode == AiErrorCode.Timeout && options.AllowTimeoutFailover))
                         && fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl))
                     {
                         token.ThrowIfCancellationRequested();

@@ -14,6 +14,62 @@ public sealed class PolicyTemplateMigrationTests
     [TestMethod]
     [DataRow(false, "\n")]
     [DataRow(true, "\r\n")]
+    public async Task StructuredAuditPolicyMigratesCompactGroupedEvidenceAndPreservesCustomPolicy(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string data = fixture.PathFor("data");
+        string path = Path.Combine(data, "chains", "security-audit", "AGENTS.md");
+        Write(path, TaskPolicyDefaults.StructuredSecurityAuditInstructions, bom, newline);
+        var service = new SecurityPolicyService(data, fixture.PathFor("modules"));
+        string migrated = await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSecurityAuditInstructions, migrated);
+        StringAssert.Contains(migrated, "occurrenceTimesUtc");
+        StringAssert.Contains(migrated, "do not deduplicate times");
+        StringAssert.Contains(migrated, "AI may dismiss them");
+        StringAssert.Contains(migrated, "Host validation and execution boundaries remain authoritative");
+        StringAssert.Contains(migrated, "one-sentence next-step summary");
+        StringAssert.Contains(migrated, "Never omit a distinct actionable finding to save space");
+        foreach (string required in new[] { "remediationPlan", "expectedResultZh", "conditionalActionZh", "riskAndRecoveryZh", "verificationZh", "how to verify recovery", "verification comes before", "never executable actions" })
+        {
+            StringAssert.Contains(migrated, required);
+        }
+
+        byte[] firstMigration = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(firstMigration, File.ReadAllBytes(path));
+
+        Write(path, TaskPolicyDefaults.StructuredSecurityAuditInstructions.Replace("at most 80 characters", "at most 70 characters", StringComparison.Ordinal), bom, newline);
+        byte[] customized = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(customized, File.ReadAllBytes(path), "A customized structured audit policy must survive migration byte-for-byte.");
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\r\n")]
+    public async Task AuditVersion3MigratesStructuredPlansAndPreservesCustomPolicy(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string data = fixture.PathFor("data");
+        string path = Path.Combine(data, "chains", "security-audit", "AGENTS.md");
+        Write(path, TaskPolicyDefaults.Version3SecurityAuditInstructions, bom, newline);
+        var service = new SecurityPolicyService(data, fixture.PathFor("modules"));
+        string migrated = await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSecurityAuditInstructions, migrated);
+        StringAssert.Contains(migrated, "remediationPlan");
+        StringAssert.Contains(migrated, "expectedResultZh");
+        byte[] firstMigration = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(firstMigration, File.ReadAllBytes(path));
+        Write(path, TaskPolicyDefaults.Version3SecurityAuditInstructions + "\nCustom user rule.", bom, newline);
+        byte[] customized = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(customized, File.ReadAllBytes(path));
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\r\n")]
     public async Task OptimizationVersion2MigratesPicturesButPreservesCustomizedPolicies(bool bom, string newline)
     {
         using var fixture = new FixtureDirectory();

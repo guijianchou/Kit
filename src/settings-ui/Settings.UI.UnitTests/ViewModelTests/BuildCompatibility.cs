@@ -3526,10 +3526,24 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitAiHubRemovedRegenerationAndSupplementalScanEntriesMustStayRemoved()
+        {
+            var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml"));
+            var viewModelFolder = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "AIHubPageViewModel.cs"));
+            var viewModels = string.Join(Environment.NewLine, Directory.GetFiles(viewModelFolder, "AIHubPageViewModel*.cs").Select(File.ReadAllText));
+            foreach (string removed in new[] { "FullDeepAnalyzeCommand", "RefreshAuditRangeCommand", "ReanalyzeRangeCommand" })
+            {
+                Assert.IsFalse(pageXaml.Contains(removed, StringComparison.Ordinal), removed + " must not remain in XAML.");
+                Assert.IsFalse(viewModels.Contains(removed, StringComparison.Ordinal), removed + " must not remain in the view model.");
+            }
+        }
+
+        [TestMethod]
         public void KitAiHubPageShouldConvergeSurfacesLocalizationA11yAndResponsiveLayout()
         {
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml"));
-            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml.cs"));
+            var pageCodePaths = Directory.GetFiles(Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml.cs")), "AIHubPage*.cs");
+            var pageCode = string.Join(Environment.NewLine, pageCodePaths.Select(File.ReadAllText));
             var paneCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsPane.xaml.cs"));
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "AIHubPageViewModel.cs"));
             var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));

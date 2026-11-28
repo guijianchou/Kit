@@ -182,7 +182,7 @@ public sealed class AuditAnalysisCacheTests
 
         var invalid = Finding("item-000001");
         invalid.Description = "Compare with item-000002.";
-        File.WriteAllText(path, JsonSerializer.Serialize(new AuditAnalysisSnapshot(2, "policy", ["a:0"], ["app"], [invalid], [null]), AIHubLibJsonContext.Default.AuditAnalysisSnapshot));
+        File.WriteAllText(path, JsonSerializer.Serialize(new AuditAnalysisSnapshot(3, "policy", ["a:0"], ["app"], [invalid], [null]), AIHubLibJsonContext.Default.AuditAnalysisSnapshot));
         var next = new AuditAnalysisCache(path).Prepare("policy", ["a"], ["app"], false);
         Assert.AreEqual(1, next.RequestedIndices.Length);
         Assert.AreEqual(0, next.ReusedIssues.Count);
@@ -213,7 +213,7 @@ public sealed class AuditAnalysisCacheTests
         Assert.AreEqual(1, new AuditAnalysisCache(path).Prepare("policy", ["hash"], ["system"], false).RequestedIndices.Length);
         var issue = Finding("item-000001");
         issue.Description = null!;
-        File.WriteAllText(path, JsonSerializer.Serialize(new AuditAnalysisSnapshot(2, "policy", ["hash:0"], ["system"], [issue], [null]), AIHubLibJsonContext.Default.AuditAnalysisSnapshot));
+        File.WriteAllText(path, JsonSerializer.Serialize(new AuditAnalysisSnapshot(3, "policy", ["hash:0"], ["system"], [issue], [null]), AIHubLibJsonContext.Default.AuditAnalysisSnapshot));
         var next = new AuditAnalysisCache(path).Prepare("policy", ["hash"], ["system"], false);
         Assert.AreEqual(1, next.RequestedIndices.Length);
         Assert.AreEqual(0, next.ReusedIssues.Count);

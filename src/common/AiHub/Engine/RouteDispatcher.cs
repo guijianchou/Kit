@@ -568,8 +568,10 @@ public sealed class RouteDispatcher
                 "project_doc_max_bytes = 0\ncheck_for_update_on_startup = false\ncli_auth_credentials_store = \"ephemeral\"\n" +
                 $"model_instructions_file = {TomlString(instructionsPath)}\n" +
                 "[agents]\nenabled = false\n" +
-                "[features]\nshell_tool = false\nunified_exec = false\napps = false\nmulti_agent = false\nmulti_agent_v2 = false\n" +
-                "[tools]\nview_image = false\n[analytics]\nenabled = false\n[feedback]\nenabled = false\n" +
+                "[features]\nshell_tool = false\nunified_exec = false\nview_image = false\napps = false\nmulti_agent = false\nmulti_agent_v2 = false\n" +
+                "code_mode = false\ncode_mode_only = false\ncurrent_time_reminder = false\nsleep_tool = false\ngoals = false\n" +
+                "[tools.experimental_request_user_input]\nenabled = false\n[tools.update_plan]\nenabled = false\n" +
+                "[analytics]\nenabled = false\n[feedback]\nenabled = false\n" +
                 "[model_providers.kit]\nname = \"Kit\"\n" +
                 $"base_url = {TomlString(baseUrl)}\nwire_api = {TomlString(target.Mode)}\nrequires_openai_auth = false\n";
             if (!string.IsNullOrWhiteSpace(target.ApiKey))
@@ -683,17 +685,6 @@ public sealed class RouteDispatcher
             return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
         }
 
-        foreach (JsonNode? entry in models)
-        {
-            if (entry is not JsonObject model)
-            {
-                return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
-            }
-
-            // Preserve bundled capabilities while disabling the private Lite transport.
-            model["use_responses_lite"] = false;
-        }
-
         string targetModel = target.Model.Trim();
         bool hasTargetModel = models.Any(entry =>
             entry is JsonObject obj &&
@@ -711,8 +702,27 @@ public sealed class RouteDispatcher
             customModel["display_name"] = targetModel;
             customModel["description"] = "Custom configured model";
             customModel["default_reasoning_level"] = target.Effort;
-            customModel["use_responses_lite"] = false;
             models.Add((JsonNode)customModel);
+        }
+
+        foreach (JsonNode? entry in models)
+        {
+            if (entry is not JsonObject model)
+            {
+                return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
+            }
+
+            // A model's tool_mode overrides feature flags. Leaving code_mode_only in
+            // the bundled catalog advertises exec/wait even with shell_tool disabled.
+            // Keep inference capabilities, but remove every catalog-provided tool from
+            // this isolated advisory worker (including clock and context-management tools).
+            // Apply this after adding a custom model, including an initially empty catalog.
+            model["use_responses_lite"] = false;
+            model["tool_mode"] = "direct";
+            model["shell_type"] = "disabled";
+            model["apply_patch_tool_type"] = null;
+            model["experimental_supported_tools"] = new JsonArray();
+            model["supports_search_tool"] = false;
         }
 
         string home = requestInfo.Environment["CODEX_HOME"]!;

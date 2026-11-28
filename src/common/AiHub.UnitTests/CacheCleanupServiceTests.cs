@@ -40,10 +40,9 @@ public sealed class CacheCleanupServiceTests
         List<TempFileInfo> items = await service.ScanAsync(CancellationToken.None);
 
         Assert.IsNotNull(items);
-        CollectionAssert.AreEquivalent(new[] { "first.tmp", "second.temp", "keep.docx" }, items.Select(item => item.FileName).ToArray());
+        CollectionAssert.AreEquivalent(new[] { "first.tmp", "second.temp" }, items.Select(item => item.FileName).ToArray());
         Assert.AreEqual("cache-whitelist", items.Single(item => item.FileName == "first.tmp").EvidenceKind);
-        Assert.AreEqual("temp-residual", items.Single(item => item.FileName == "keep.docx").EvidenceKind);
-        Assert.AreEqual(RiskLevel.Medium, items.Single(item => item.FileName == "keep.docx").Risk);
+        Assert.IsFalse(items.Any(item => item.FileName == "keep.docx"), "Document protection is enforced before AI review.");
         Assert.IsTrue(items.Count <= 200000, "The scan must stay bounded.");
 
         foreach (TempFileInfo item in items)

@@ -54,6 +54,9 @@ Report Id: 5aec5527-d101-4abc-965d-278ce173c997";
 
         // An APO is a driver-side component, so "update the app" advice would be wrong.
         StringAssert.Contains(issues[0].Recommendation, "devmgmt.msc");
+        Assert.IsTrue(issues[0].RemediationPlan!.IsValid);
+        StringAssert.Contains(issues[0].RemediationPlan!.Checks[0].Check, "Audio enhancements");
+        StringAssert.Contains(issues[0].RemediationPlan!.Checks[0].ExpectedResult, "does not prove");
         Assert.IsFalse(issues[0].Recommendation.Contains("Visual C++ Redistributable"), "Driver faults must not get runtime-redistributable advice.");
     }
 

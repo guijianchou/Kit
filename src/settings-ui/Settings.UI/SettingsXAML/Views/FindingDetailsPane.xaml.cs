@@ -58,6 +58,7 @@ public sealed partial class FindingDetailsPane : UserControl, ILiveLocalizable
         if (_finding != null)
         {
             EvidenceText.Text = BuildEvidence(_finding);
+            RenderRemediation(_finding);
         }
     }
 
@@ -93,7 +94,7 @@ public sealed partial class FindingDetailsPane : UserControl, ILiveLocalizable
         ReasonSection.Visibility = string.IsNullOrWhiteSpace(finding.PriorityReasonText)
             || string.Equals(finding.PriorityReasonText, finding.EvidenceSummaryText, StringComparison.Ordinal)
             ? Visibility.Collapsed : Visibility.Visible;
-        RecommendationText.Text = finding.PriorityActionText;
+        RenderRemediation(finding);
         EvidenceText.Text = BuildEvidence(finding);
         PositionText.Text = index >= 0
             ? "AIHub_Fluent_FindingPosition".FormatLocalized("{0:N0} of {1:N0} matching findings", index + 1, count)
@@ -105,9 +106,53 @@ public sealed partial class FindingDetailsPane : UserControl, ILiveLocalizable
         if (changedFinding)
         {
             EvidenceExpander.IsExpanded = false;
+            PreviousAdviceExpander.IsExpanded = false;
             DetailsScroll.ChangeView(null, 0, null, disableAnimation: true);
             CopyFeedbackText.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void RenderRemediation(AuditIssueEnhanced finding)
+    {
+        bool chinese = System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+        static string Local(string english, string translated, bool preferChinese) => preferChinese
+            ? string.IsNullOrWhiteSpace(translated) ? english : translated
+            : string.IsNullOrWhiteSpace(english) ? translated : english;
+        var plan = finding.EffectiveRemediationPlan;
+        CheckPlanLabel.Text = "FindingDetails_CheckFirst".GetLocalizedOrFallback("1 · Check and decide");
+        ConditionalActionLabel.Text = "FindingDetails_ConditionalAction".GetLocalizedOrFallback("2 · Choose the matching action");
+        VerificationLabel.Text = "FindingDetails_VerifyResult".GetLocalizedOrFallback("3 · Verify the result");
+        RecoveryLabel.Text = "FindingDetails_RiskRecovery".GetLocalizedOrFallback("Before changing anything · Impact and recovery");
+        PlanSourceText.Text = finding.RemediationPlan?.HasContent == true
+            ? "FindingDetails_PlanBasis".GetLocalizedOrFallback("Follow the conditions below; the audit has not executed these steps.")
+            : "FindingDetails_LocalGuide".GetLocalizedOrFallback("Local diagnostic guide for this saved event. Confirm the cause before choosing a repair.");
+        var checks = new StringBuilder();
+        int index = 0;
+        foreach (var check in plan.Checks ?? [])
+        {
+            if (check == null)
+            {
+                continue;
+            }
+
+            if (index > 0)
+            {
+                checks.AppendLine();
+            }
+
+            checks.AppendLine(System.Globalization.CultureInfo.CurrentCulture, $"{++index}. {Local(check.Check, check.CheckZh, chinese)}");
+            checks.Append(chinese ? "判断标准：" : "Decision criteria: ");
+            checks.AppendLine(Local(check.ExpectedResult, check.ExpectedResultZh, chinese));
+        }
+
+        RecommendationText.Text = checks.ToString().TrimEnd();
+        ConditionalActionText.Text = Local(plan.ConditionalAction, plan.ConditionalActionZh, chinese);
+        VerificationText.Text = Local(plan.Verification, plan.VerificationZh, chinese);
+        RecoveryText.Text = Local(plan.RiskAndRecovery, plan.RiskAndRecoveryZh, chinese);
+        PreviousAdviceText.Text = Local(finding.Recommendation, finding.RecommendationZh, chinese);
+        PreviousAdviceExpander.Header = "FindingDetails_PreviousAdvice".GetLocalizedOrFallback("Previously recorded advice");
+        PreviousAdviceExpander.Visibility = finding.RemediationPlan is null && !string.IsNullOrWhiteSpace(PreviousAdviceText.Text)
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void SetActionState(bool canAnalyze, string hint)

@@ -93,13 +93,18 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="MinWidth" Value="456" />
+            <Setter Property="MinWidth" Value="300" />
             <Setter Property="MaxWidth" Value="456" />
             <Setter Property="MaxHeight" Value="664" />
             <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Disabled" />
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
             <Setter Property="ScrollViewer.VerticalScrollMode" Value="Disabled" />
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+        </Style>
+        <Style x:Key="AiUsageMetricLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource KitMetricTileLabelStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style x:Key="AiUsageScopeButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
             <Setter Property="MinHeight" Value="26" />
@@ -347,12 +352,16 @@
 
                                 <!-- Row 0: Pinned Header + Scope + Live Banner -->
                                 <StackPanel Padding="16,14,16,10" Spacing="10">
-                                    <Grid ColumnSpacing="8">
+                                    <Grid x:Name="AiUsageHeaderGrid" ColumnSpacing="8" RowSpacing="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <tkcontrols:WrapPanel x:Name="AiUsageHeaderTitle" Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="6" VerticalAlignment="Center">
                                             <Border
                                                 Width="26"
                                                 Height="26"
@@ -388,8 +397,8 @@
                                                     FontWeight="SemiBold"
                                                     Foreground="{ThemeResource BadgeInfoForegroundBrush}" />
                                             </Border>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        </tkcontrols:WrapPanel>
+                                        <StackPanel x:Name="AiUsageHeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <Border
                                                 x:Name="AiUsageLivePill"
                                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
@@ -616,10 +625,11 @@
                                                         <RowDefinition Height="*" />
                                                         <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
-                                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Grid ColumnSpacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                                         <FontIcon x:Name="AiUsageTabOverviewIcon" FontSize="12" Glyph="&#xE9D9;" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="AiUsageTabOverviewText" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" VerticalAlignment="Center" />
-                                                    </StackPanel>
+                                                        <TextBlock x:Name="AiUsageTabOverviewText" Grid.Column="1" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    </Grid>
                                                     <Border x:Name="AiUsageTabOverviewIndicator" Grid.Row="1" Width="28" Height="2.5" CornerRadius="1.25" HorizontalAlignment="Center" Visibility="Collapsed" />
                                                 </Grid>
                                             </Button>
@@ -634,10 +644,11 @@
                                                         <RowDefinition Height="*" />
                                                         <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
-                                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Grid ColumnSpacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                                         <FontIcon x:Name="AiUsageTabModelsIcon" FontSize="12" Glyph="&#xF158;" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="AiUsageTabModelsText" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" VerticalAlignment="Center" />
-                                                    </StackPanel>
+                                                        <TextBlock x:Name="AiUsageTabModelsText" Grid.Column="1" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    </Grid>
                                                     <Border x:Name="AiUsageTabModelsIndicator" Grid.Row="1" Width="28" Height="2.5" CornerRadius="1.25" HorizontalAlignment="Center" Visibility="Collapsed" />
                                                 </Grid>
                                             </Button>
@@ -652,10 +663,11 @@
                                                         <RowDefinition Height="*" />
                                                         <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
-                                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Grid ColumnSpacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                                         <FontIcon x:Name="AiUsageTabActivityIcon" FontSize="12" Glyph="&#xE95E;" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="AiUsageTabActivityText" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" VerticalAlignment="Center" />
-                                                    </StackPanel>
+                                                        <TextBlock x:Name="AiUsageTabActivityText" Grid.Column="1" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    </Grid>
                                                     <Border x:Name="AiUsageTabActivityIndicator" Grid.Row="1" Width="28" Height="2.5" CornerRadius="1.25" HorizontalAlignment="Center" Visibility="Collapsed" />
                                                 </Grid>
                                             </Button>
@@ -686,13 +698,11 @@
 
                                                 <Border x:Name="AiUsageKpiTokensTile" Style="{StaticResource KitMetricTileBorderStyle}">
                                                     <StackPanel Spacing="3">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <Ellipse Width="7" Height="7" Fill="{ThemeResource KitUsageCpuBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock
-                                                                x:Uid="Shell_AiUsageTotalTokensLabel"
-                                                                services:RuntimeLocalization.Uid="Shell_AiUsageTotalTokensLabel"
-                                                                Style="{StaticResource KitMetricTileLabelStyle}" />
-                                                        </StackPanel>
+                                                        <Grid ColumnSpacing="7" Margin="0,0,0,3">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                            <FontIcon x:Name="AiUsageTokensMetricIcon" FontSize="15" Glyph="&#xE8D4;" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" x:Uid="Shell_AiUsageTotalTokensLabel" services:RuntimeLocalization.Uid="Shell_AiUsageTotalTokensLabel" Style="{StaticResource AiUsageMetricLabelStyle}" />
+                                                        </Grid>
                                                         <TextBlock
                                                             x:Name="AiUsageTotalTokensText"
                                                             Foreground="{ThemeResource KitUsageCpuBrush}"
@@ -708,13 +718,11 @@
 
                                                 <Border x:Name="AiUsageKpiCacheTile" Grid.Column="1" Style="{StaticResource KitMetricTileBorderStyle}">
                                                     <StackPanel Spacing="3">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <Ellipse Width="7" Height="7" Fill="{ThemeResource KitUsageDiskBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock
-                                                                x:Uid="Shell_AiUsageCacheHitLabel"
-                                                                services:RuntimeLocalization.Uid="Shell_AiUsageCacheHitLabel"
-                                                                Style="{StaticResource KitMetricTileLabelStyle}" />
-                                                        </StackPanel>
+                                                        <Grid ColumnSpacing="7" Margin="0,0,0,3">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                            <FontIcon x:Name="AiUsageCacheMetricIcon" FontSize="15" Glyph="&#xE8AB;" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" x:Uid="Shell_AiUsageCacheHitLabel" services:RuntimeLocalization.Uid="Shell_AiUsageCacheHitLabel" Style="{StaticResource AiUsageMetricLabelStyle}" />
+                                                        </Grid>
                                                         <TextBlock
                                                             x:Name="AiUsageCacheHitRateText"
                                                             Foreground="{ThemeResource KitUsageDiskBrush}"
@@ -730,13 +738,11 @@
 
                                                 <Border x:Name="AiUsageKpiTasksTile" Grid.Row="1" Style="{StaticResource KitMetricTileBorderStyle}">
                                                     <StackPanel Spacing="3">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <Ellipse Width="7" Height="7" Fill="{ThemeResource KitUsageMemoryBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock
-                                                                x:Uid="Shell_AiUsageTasksCallsLabel"
-                                                                services:RuntimeLocalization.Uid="Shell_AiUsageTasksCallsLabel"
-                                                                Style="{StaticResource KitMetricTileLabelStyle}" />
-                                                        </StackPanel>
+                                                        <Grid ColumnSpacing="7" Margin="0,0,0,3">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                            <FontIcon x:Name="AiUsageTasksMetricIcon" FontSize="15" Glyph="&#xE9D9;" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" x:Uid="Shell_AiUsageTasksCallsLabel" services:RuntimeLocalization.Uid="Shell_AiUsageTasksCallsLabel" Style="{StaticResource AiUsageMetricLabelStyle}" />
+                                                        </Grid>
                                                         <TextBlock
                                                             x:Name="AiUsageTasksCountValueText"
                                                             Foreground="{ThemeResource KitUsageMemoryBrush}"
@@ -752,13 +758,11 @@
 
                                                 <Border x:Name="AiUsageKpiLatencyTile" Grid.Row="1" Grid.Column="1" Style="{StaticResource KitMetricTileBorderStyle}">
                                                     <StackPanel Spacing="3">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <Ellipse Width="7" Height="7" Fill="{ThemeResource KitDataSeriesUdpBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock
-                                                                x:Uid="Shell_AiUsageAvgLatencyLabel"
-                                                                services:RuntimeLocalization.Uid="Shell_AiUsageAvgLatencyLabel"
-                                                                Style="{StaticResource KitMetricTileLabelStyle}" />
-                                                        </StackPanel>
+                                                        <Grid ColumnSpacing="7" Margin="0,0,0,3">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                            <FontIcon x:Name="AiUsageLatencyMetricIcon" FontSize="15" Glyph="&#xE823;" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" x:Uid="Shell_AiUsageAvgLatencyLabel" services:RuntimeLocalization.Uid="Shell_AiUsageAvgLatencyLabel" Style="{StaticResource AiUsageMetricLabelStyle}" />
+                                                        </Grid>
                                                         <TextBlock
                                                             x:Name="AiUsageAvgLatencyText"
                                                             Foreground="{ThemeResource KitDataSeriesUdpBrush}"

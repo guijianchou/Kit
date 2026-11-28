@@ -19,10 +19,12 @@ public sealed partial class AuditAnalysisCache
     private string[] _contexts = [];
     private DateTime?[] _eventTimes = [];
     private List<AuditIssue> _issues = [];
+    private string _usedModel = string.Empty;
+    private string _usedRoute = string.Empty;
     private bool _loaded;
     public const int MaximumEvents = 400;
     private const int MaximumBytes = 8 * 1024 * 1024;
-    private const int SnapshotVersion = 2;
+    private const int SnapshotVersion = 3;
     private static readonly TimeSpan CorrelationWindow = TimeSpan.FromMinutes(5);
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_-])item-[0-9]+(?![A-Za-z0-9_-])", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
@@ -122,11 +124,13 @@ public sealed partial class AuditAnalysisCache
                     reused.Add(Project(issue, reference => Reference(current[_identities[Parse(reference, _identities.Length)]])));
                 }
             }
-            return new(scope, identities, contexts.ToArray(), Enumerable.Range(0, identities.Length).Where(index => changedContexts.Contains(contexts[index])).ToArray(), reused, times);
+            bool sameScope = !force && string.Equals(scope, _scope, StringComparison.Ordinal);
+            return new(scope, identities, contexts.ToArray(), Enumerable.Range(0, identities.Length).Where(index => changedContexts.Contains(contexts[index])).ToArray(), reused, times,
+                sameScope ? _usedModel : string.Empty, sameScope ? _usedRoute : string.Empty);
         }
     }
 
-    public void Commit(AuditAnalysisPlan plan, IReadOnlyList<AuditIssue> completedIssues)
+    public void Commit(AuditAnalysisPlan plan, IReadOnlyList<AuditIssue> completedIssues, string usedModel = "", string usedRoute = "")
     {
         lock (_gate)
         {
@@ -139,6 +143,8 @@ public sealed partial class AuditAnalysisCache
             _contexts = plan.Contexts;
             _eventTimes = plan.EventTimes ?? new DateTime?[plan.Identities.Length];
             _issues = projected;
+            _usedModel = usedModel;
+            _usedRoute = usedRoute;
             Save();
         }
     }
@@ -164,6 +170,8 @@ public sealed partial class AuditAnalysisCache
             _contexts = snapshot.Contexts;
             _eventTimes = snapshot.EventTimes;
             _issues = snapshot.Issues;
+            _usedModel = snapshot.UsedModel ?? string.Empty;
+            _usedRoute = snapshot.UsedRoute ?? string.Empty;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -177,7 +185,7 @@ public sealed partial class AuditAnalysisCache
         string temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new AuditAnalysisSnapshot(SnapshotVersion, _scope, _identities, _contexts, _issues, _eventTimes), AIHubLibJsonContext.Default.AuditAnalysisSnapshot);
+            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new AuditAnalysisSnapshot(SnapshotVersion, _scope, _identities, _contexts, _issues, _eventTimes, _usedModel, _usedRoute), AIHubLibJsonContext.Default.AuditAnalysisSnapshot);
             if (bytes.Length > MaximumBytes) return;
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             File.WriteAllBytes(temporary, bytes);
@@ -207,6 +215,7 @@ public sealed partial class AuditAnalysisCache
         RootCauseZh = MapNarrative(issue.RootCauseZh, map),
         Recommendation = MapNarrative(issue.Recommendation, map),
         RecommendationZh = MapNarrative(issue.RecommendationZh, map),
+        RemediationPlan = MapRemediation(issue.RemediationPlan, map),
     };
 
     // Narrative-only citations are evidence too: validate them, track their invalidation, and make
@@ -219,7 +228,20 @@ public sealed partial class AuditAnalysisCache
         ? value : NarrativeReferencePattern().Replace(value, match => map(match.Value));
 
     private static IEnumerable<string> NarrativeFields(AuditIssue issue) =>
-        [issue.Title, issue.TitleZh, issue.Description, issue.DescriptionZh, issue.RootCause, issue.RootCauseZh, issue.Recommendation, issue.RecommendationZh];
+        new[] { issue.Title, issue.TitleZh, issue.Description, issue.DescriptionZh, issue.RootCause, issue.RootCauseZh, issue.Recommendation, issue.RecommendationZh }
+            .Concat(issue.RemediationPlan?.TextFields() ?? []);
+
+    private static AuditRemediationPlan? MapRemediation(AuditRemediationPlan? plan, Func<string, string> map) => plan is null ? null : new()
+    {
+        Checks = (plan.Checks ?? []).Where(check => check is not null).Select(check => new AuditRemediationCheck
+        {
+            Check = MapNarrative(check.Check, map), CheckZh = MapNarrative(check.CheckZh, map),
+            ExpectedResult = MapNarrative(check.ExpectedResult, map), ExpectedResultZh = MapNarrative(check.ExpectedResultZh, map),
+        }).ToList(),
+        ConditionalAction = MapNarrative(plan.ConditionalAction, map), ConditionalActionZh = MapNarrative(plan.ConditionalActionZh, map),
+        RiskAndRecovery = MapNarrative(plan.RiskAndRecovery, map), RiskAndRecoveryZh = MapNarrative(plan.RiskAndRecoveryZh, map),
+        Verification = MapNarrative(plan.Verification, map), VerificationZh = MapNarrative(plan.VerificationZh, map),
+    };
 
     private static IEnumerable<string> References(AuditIssue issue) => issue.RelatedEventRefs.Append(issue.EventRef)
         .Concat(GetNarrativeReferences(issue)).Distinct(StringComparer.Ordinal);
@@ -246,15 +268,16 @@ public sealed partial class AuditAnalysisCache
         && issue.Severity is "High" or "Medium" or "Low" && issue.Confidence is "High" or "Medium" or "Low"
         && issue.Occurrences > 0 && issue.EventId is not null && issue.EventTimestamp is not null && issue.Source is not null
         && issue.LogName is not null && issue.Category is not null && issue.Affected is not null
+        && (issue.RemediationPlan is null || issue.RemediationPlan.IsValid)
         && NarrativeFields(issue).All(value => !string.IsNullOrWhiteSpace(value) && value.Length <= 8192);
     internal static string Reference(int index) => "item-" + (index + 1).ToString("D6", CultureInfo.InvariantCulture);
     internal static int Parse(string reference, int count) => reference is not null && reference.Length == 11 && reference.StartsWith("item-", StringComparison.Ordinal)
         && int.TryParse(reference.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int number) && number > 0 && number <= count ? number - 1 : -1;
 }
 
-public sealed record AuditAnalysisSnapshot(int Version, string Scope, string[] Identities, string[] Contexts, List<AuditIssue> Issues, DateTime?[]? EventTimes = null);
+public sealed record AuditAnalysisSnapshot(int Version, string Scope, string[] Identities, string[] Contexts, List<AuditIssue> Issues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "");
 
-public sealed record AuditAnalysisPlan(string Scope, string[] Identities, string[] Contexts, int[] RequestedIndices, List<AuditIssue> ReusedIssues, DateTime?[]? EventTimes = null)
+public sealed record AuditAnalysisPlan(string Scope, string[] Identities, string[] Contexts, int[] RequestedIndices, List<AuditIssue> ReusedIssues, DateTime?[]? EventTimes = null, string UsedModel = "", string UsedRoute = "")
 {
     public AuditIssue RestoreReference(AuditIssue issue) => AuditAnalysisCache.Project(issue, reference =>
     {

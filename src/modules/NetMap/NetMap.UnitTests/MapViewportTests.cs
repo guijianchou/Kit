@@ -96,6 +96,56 @@ public sealed class MapViewportTests
         Assert.AreEqual(fitted, MapViewport.Fit(points, 480, 268, 1));
     }
 
+    [TestMethod]
+    public void ZoomAtPointerKeepsItsGeographicLocationFixed()
+    {
+        var location = new MapCoordinate(121.47, 31.23);
+        var fitted = MapViewport.Fit([new(115, 25), new(140, 40)], 480, 268);
+        var anchor = fitted.Position(location);
+        var zoomed = fitted.ZoomAt(2, anchor);
+        Assert.AreEqual(fitted.Scale * 2, zoomed.Scale);
+        Assert.AreEqual(anchor.X, zoomed.Position(location).X, 0.001);
+        Assert.AreEqual(anchor.Y, zoomed.Position(location).Y, 0.001);
+    }
+
+    [TestMethod]
+    public void PanningAcrossDateLineKeepsLocalPositionsContinuous()
+    {
+        var location = new MapCoordinate(179, 10);
+        var viewport = MapViewport.Fit([location, new(-179, 12)], 480, 268);
+        var before = viewport.Position(location);
+        var moved = viewport.Pan(-40, 18);
+        Assert.AreEqual(before.X - 40, moved.Position(location).X, 0.001);
+        Assert.AreEqual(before.Y + 18, moved.Position(location).Y, 0.001);
+        Assert.IsTrue(moved.CenterX >= 0 && moved.CenterX < MapViewport.WorldWidth);
+        var fullCircle = moved.Pan(MapViewport.WorldWidth * moved.Scale * 3, 0);
+        Assert.AreEqual(moved.Position(location).X, fullCircle.Position(location).X, 0.001);
+    }
+
+    [TestMethod]
+    public void PanningCannotExposeBlankSpaceBeyondThePoles()
+    {
+        var viewport = MapViewport.Fit([new(0, 40)], 480, 268);
+        Assert.AreEqual(0, viewport.Pan(0, 1e6).OffsetY, 0.001);
+        Assert.AreEqual(viewport.Height - (MapViewport.WorldHeight * viewport.Scale), viewport.Pan(0, -1e6).OffsetY, 0.001);
+        var world = MapViewport.Fit([], 320, 600).Pan(0, 400);
+        Assert.AreEqual((world.Height - (MapViewport.WorldHeight * world.Scale)) / 2, world.OffsetY, 0.001);
+        Assert.AreEqual(viewport, viewport.Pan(double.NaN, 0));
+        Assert.AreEqual(viewport, viewport.ZoomAt(double.PositiveInfinity, new(10, 10)));
+    }
+
+    [TestMethod]
+    public void ResizePreservesManuallyChosenCenterAndScale()
+    {
+        var viewport = MapViewport.Fit([new(100, 20), new(120, 40)], 480, 268).Pan(20, 10);
+        var resized = viewport.Resize(720, 360);
+        var location = new MapCoordinate(110, 30);
+        Assert.AreEqual(viewport.Scale, resized.Scale);
+        Assert.AreEqual(viewport.CenterX, resized.CenterX, 0.001);
+        Assert.AreEqual(viewport.Position(location).X + 120, resized.Position(location).X, 0.001);
+        Assert.AreEqual(viewport.Position(location).Y + 46, resized.Position(location).Y, 0.001);
+    }
+
     private static void AssertInside(MapViewport viewport, MapCoordinate coordinate)
     {
         var point = viewport.Position(coordinate);

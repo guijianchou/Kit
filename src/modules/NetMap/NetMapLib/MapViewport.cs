@@ -19,7 +19,7 @@ public sealed record MapViewport(double Width, double Height, double Scale, doub
     {
         width = double.IsFinite(width) ? Math.Max(1, width) : 960;
         height = double.IsFinite(height) ? Math.Max(1, height) : 480;
-        zoom = double.IsFinite(zoom) ? Math.Clamp(zoom, 1, 4) : 1;
+        zoom = double.IsFinite(zoom) ? Math.Clamp(zoom, 1, 8) : 1;
         var points = coordinates.Where(IsValid).Select(point => Project(point!)).ToArray();
         double centerX = WorldWidth / 2;
         double centerY = WorldHeight / 2;
@@ -68,6 +68,38 @@ public sealed record MapViewport(double Width, double Height, double Scale, doub
         var point = Project(coordinate);
         double x = CenterX + (((point.X - CenterX + (WorldWidth * 1.5)) % WorldWidth) - (WorldWidth / 2));
         return new((x * Scale) + OffsetX, (point.Y * Scale) + OffsetY);
+    }
+
+    public MapViewport Pan(double deltaX, double deltaY) => double.IsFinite(deltaX) && double.IsFinite(deltaY)
+        ? Normalize(Scale, OffsetX + deltaX, OffsetY + deltaY) : this;
+
+    public MapViewport ZoomAt(double factor, MapPoint anchor) => double.IsFinite(factor) && factor > 0 && double.IsFinite(anchor.X) && double.IsFinite(anchor.Y)
+        ? Normalize(Scale * factor, anchor.X - ((anchor.X - OffsetX) * factor), anchor.Y - ((anchor.Y - OffsetY) * factor)) : this;
+
+    public MapViewport Resize(double width, double height)
+    {
+        if (!double.IsFinite(width) || !double.IsFinite(height) || width <= 0 || height <= 0)
+        {
+            return this;
+        }
+
+        var resized = this with { Width = width, Height = height };
+        return resized.Normalize(Scale, OffsetX + ((width - Width) / 2), OffsetY + ((height - Height) / 2));
+    }
+
+    private MapViewport Normalize(double scale, double offsetX, double offsetY)
+    {
+        if (!double.IsFinite(scale) || scale <= 0 || !double.IsFinite(offsetX) || !double.IsFinite(offsetY))
+        {
+            return this;
+        }
+
+        // Keep the center in the canonical world copy so repeated date-line pans
+        // never accumulate unbounded coordinates. Prevent empty space at the poles.
+        double center = ((Width / 2) - offsetX) / scale;
+        double wrapped = ((center % WorldWidth) + WorldWidth) % WorldWidth;
+        double verticalSpace = Height - (WorldHeight * scale);
+        return new(Width, Height, scale, wrapped, (Width / 2) - (wrapped * scale), verticalSpace >= 0 ? verticalSpace / 2 : Math.Clamp(offsetY, verticalSpace, 0));
     }
 
     public static MapPoint Project(MapCoordinate coordinate) => new((coordinate.Longitude + 180) * WorldWidth / 360, (90 - coordinate.Latitude) * WorldHeight / 180);

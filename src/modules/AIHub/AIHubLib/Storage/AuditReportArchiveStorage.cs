@@ -48,6 +48,7 @@ internal static class AuditReportArchiveStorage
                 archive = JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.AuditReportArchive)
                     ?? throw new InvalidDataException("The daily audit archive is invalid.");
                 Validate(archive);
+                archive.Version = 3;
             }
         }
         else if (LatestExportDate(directory) is { } lastExport)
@@ -101,6 +102,13 @@ internal static class AuditReportArchiveStorage
                     {
                         // Oversized/corrupt scalar metadata must not turn compaction into an infinite loop.
                         scan.UsedModel = string.Empty;
+                        scan.AiReportSummary = null;
+                        scan.AiReportMeta = null;
+                        scan.AiAnalysisScope = null;
+                        scan.AiEvidenceFingerprint = null;
+                        scan.CollectionProfile = null;
+                        scan.SkippedChannels = null;
+                        scan.LimitedChannels = null;
                         scan.AnalysisOutcome = "partial";
                         scan.IncompleteLogs = true;
                     }
@@ -165,7 +173,14 @@ internal static class AuditReportArchiveStorage
                 Timestamp = result.Timestamp, HealthScore = result.HealthScore,
                 AnalysisOutcome = result.AnalysisOutcome?.Length > 32 ? "partial" : result.AnalysisOutcome,
                 UsedModel = result.UsedModel?.Length > 256 ? result.UsedModel[..256] : result.UsedModel ?? string.Empty,
-                IncompleteLogs = result.SkippedChannels?.Count > 0 || result.LimitedChannels?.Count > 0,
+                IncompleteLogs = result.EvidenceIncomplete || result.SkippedChannels?.Count > 0 || result.LimitedChannels?.Count > 0,
+                EvidenceIncomplete = result.EvidenceIncomplete,
+                ScanStart = result.ScanStart, ScanEnd = result.ScanEnd, EventsScanned = result.EventsScanned,
+                CollectionProfile = result.CollectionProfile,
+                SkippedChannels = result.SkippedChannels?.ToList(), LimitedChannels = result.LimitedChannels?.ToList(),
+                AiReportSummary = result.AiReportSummary, AiReportMeta = result.AiReportMeta,
+                AiAnalysisScope = result.AiAnalysisScope, AiEvidenceFingerprint = result.AiEvidenceFingerprint,
+                AiAnalyzedEvents = result.AiAnalyzedEvents, AiReusedEvents = result.AiReusedEvents,
                 Findings = indices.ToArray(),
             };
         }
@@ -218,7 +233,7 @@ internal static class AuditReportArchiveStorage
 
     private static void Validate(AuditReportArchive archive)
     {
-        if (archive.Version != 2 || archive.Days is null || archive.Days.Count > MaxDays
+        if (archive.Version is not (2 or 3) || archive.Days is null || archive.Days.Count > MaxDays
             || archive.Days.Any(day => day is null || day.Audits < 1 || day.Findings is null || day.Findings.Any(finding => finding is null)
                 || day.Scans is null || day.Scans.Count == 0 || day.Scans.Any(scan => scan is null || scan.Findings is null
                     || scan.Findings.Any(index => index < 0 || index >= day.Findings.Count))

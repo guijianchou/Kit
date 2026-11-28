@@ -89,9 +89,8 @@ public sealed class OptimizationSafetyTests
         WriteOld(Path.Combine(local, "npm-cache", "configuration.json"));
         var service = new CacheCleanupService(local, temp, _ => throw new AssertFailedException("Scanning must never recycle."));
         var items = await service.ScanAsync();
-        CollectionAssert.AreEquivalent(new[] { "old.tmp", "old.temp", "user.docx", "thumbcache_32.db", "old-cache" }, items.Select(i => i.FileName).ToArray());
-        Assert.AreEqual("temp-residual", items.Single(i => i.FileName == "user.docx").EvidenceKind);
-        Assert.AreEqual(RiskLevel.Medium, items.Single(i => i.FileName == "user.docx").Risk);
+        CollectionAssert.AreEquivalent(new[] { "old.tmp", "old.temp", "thumbcache_32.db", "old-cache" }, items.Select(i => i.FileName).ToArray());
+        Assert.IsTrue(File.Exists(Path.Combine(temp, "user.docx")), "User documents are excluded by the host before AI review.");
         Assert.IsTrue(items.All(i => File.Exists(i.FilePath)));
         Assert.AreEqual(items.Count, items.Select(i => i.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }

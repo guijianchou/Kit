@@ -97,7 +97,7 @@ public sealed class DownloadOrganizerService
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (!OptimizationFileSafety.IsEligible(file, MinimumAge)) continue;
+                if (OptimizationProtectionPolicy.IsSensitiveState(file.FullName) || !OptimizationFileSafety.IsEligible(file, MinimumAge)) continue;
 
                 bool known = ExtensionToCategory.TryGetValue(file.Extension, out string? category);
                 string resolvedCategory = known ? category! : OthersCategory;
@@ -166,6 +166,8 @@ public sealed class DownloadOrganizerService
 
             root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
             var file = new FileInfo(item.FilePath);
+            if (OptimizationProtectionPolicy.IsSensitiveState(file.FullName))
+                return (false, null, "Credentials and configuration are protected. / 凭据和配置受保护。");
             if (!string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase))
             {
                 return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");

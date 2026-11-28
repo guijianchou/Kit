@@ -300,7 +300,7 @@ public sealed class AuditPeriodReportTests
         Assert.AreEqual(1, report.Days.Count);
         Assert.AreEqual(12, report.Days.Single().Audits);
         var migrated = JsonSerializer.Deserialize(await File.ReadAllTextAsync(Path.Combine(store.ReportsDirectory, "daily-summary.json")), AIHubLibJsonContext.Default.AuditReportArchive)!;
-        Assert.AreEqual(2, migrated.Version);
+        Assert.AreEqual(3, migrated.Version);
         Assert.AreEqual(93, migrated.Days.Count);
     }
 
@@ -339,11 +339,18 @@ public sealed class AuditPeriodReportTests
         var large = new AuditResult
         {
             Timestamp = morning,
-            Findings = [new() { Key = "large", Recommendation = new string('x', 18 * 1024 * 1024) }],
+
+            // The source field itself exceeds the archive budget; this must not depend
+            // on a display projection serializing the same recommendation twice.
+            Findings = [new() { Key = "large", Recommendation = new string('x', 33 * 1024 * 1024) }],
         };
+        Assert.IsTrue(JsonSerializer.SerializeToUtf8Bytes(large.Findings.Single(), AIHubLibJsonContext.Default.AuditIssueEnhanced).Length > 32 * 1024 * 1024);
         store.SaveResult(large);
         string archivePath = Path.Combine(store.ReportsDirectory, "daily-summary.json");
         Assert.IsTrue(new FileInfo(archivePath).Length <= 32 * 1024 * 1024);
+        var trimmed = JsonSerializer.Deserialize(await File.ReadAllTextAsync(archivePath), AIHubLibJsonContext.Default.AuditReportArchive)!;
+        Assert.IsTrue(trimmed.Days.Single().EvidenceIncomplete, "The oversized finding must mark the archived evidence incomplete immediately.");
+        Assert.AreEqual(0, trimmed.Days.Single().Findings.Count);
         var fresh = new AuditResult { Timestamp = morning.AddHours(1), HealthScore = 79, Findings = [new() { Key = "fresh" }] };
         store.SaveResult(fresh);
         var report = await store.LoadPeriodReportAsync(DateOnly.FromDateTime(morning.ToLocalTime()), TimeZoneInfo.Local, false);

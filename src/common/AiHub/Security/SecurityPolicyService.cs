@@ -107,7 +107,9 @@ public sealed class SecurityPolicyService
             {
                 "security-audit" => PolicyHash(content) == "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
                     || content == NormalizePolicy(TaskPolicyDefaults.PreviousSecurityAuditInstructions)
-                    || content == NormalizePolicy(TaskPolicyDefaults.Version2SecurityAuditInstructions),
+                    || content == NormalizePolicy(TaskPolicyDefaults.Version2SecurityAuditInstructions)
+                    || content == NormalizePolicy(TaskPolicyDefaults.Version3SecurityAuditInstructions)
+                    || content == NormalizePolicy(TaskPolicyDefaults.StructuredSecurityAuditInstructions),
                 "system-optimization" => content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.PreviousSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.AiReviewedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||

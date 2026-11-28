@@ -12,6 +12,10 @@ public sealed class EventAnalysisInput
     public int? Level { get; set; }
     public string TimeUtc { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
+
+    /// <summary>All observed times when identical, untruncated records are packed together.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? OccurrenceTimesUtc { get; set; }
 }
 
 public sealed class OptimizationItemInput

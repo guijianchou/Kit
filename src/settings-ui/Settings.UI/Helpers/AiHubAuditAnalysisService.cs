@@ -64,12 +64,14 @@ public static class AiHubAuditAnalysisService
     /// </summary>
     public const int AnalysisTimeoutSeconds = 1_800;
 
-    // Use the engine's effort-based batch size so high-effort analysis receives smaller
-    // batches within the same route deadline. The selected input set remains unchanged.
-    public const int AnalysisBatchSize = 0;
+    // Exact repetitions share an envelope and the engine still enforces its encoded-size
+    // limit. Avoid paying max-effort reasoning and repeated report generation every 15 events.
+    public const int AnalysisBatchSize = AuditEvidencePacking.BatchSize;
 
-    // Each native route owns its retries within this budget; a slow Main can then use Fallback.
-    public const int AnalysisRouteTimeoutSeconds = 300;
+    // Astra audit batches can take several minutes while still completing successfully.
+    // Keep the overall audit deadline bounded, but do not silently replace a slow
+    // primary model with the fallback route merely because this route budget elapsed.
+    public const int AnalysisRouteTimeoutSeconds = 900;
 
     public static string Language => IsChinese ? "zh-CN" : "en-US";
 
@@ -106,6 +108,127 @@ public static class AiHubAuditAnalysisService
         public int ValidatedBatchCount { get; init; }
         public int ReusedEvents { get; init; }
         public int AnalyzedEvents { get; init; }
+        public string Scope { get; init; } = string.Empty;
+        public string EvidenceFingerprint { get; init; } = string.Empty;
+        public string UsedModel { get; init; } = string.Empty;
+        public string UsedRoute { get; init; } = string.Empty;
+        public bool MatchesRequestedModel { get; init; }
+
+        // This proves coverage of the bounded selected inputs, not every collected event.
+        public bool CompleteEvidenceCoverage { get; init; }
+    }
+
+    /// <summary>Session-only checkpoints for validated batches, including batches with no findings.</summary>
+    public sealed class AuditAnalysisRetryState
+    {
+        private readonly object _gate = new();
+        private readonly HashSet<int> _completed = [];
+        private readonly List<AuditIssue> _issues = [];
+        private string _identity = string.Empty;
+        private AuditAnalysisPlan? _originalPlan;
+        private AuditAnalysisPlan? _activePlan;
+        private string _checkpointModel = string.Empty;
+        private string _checkpointRoute = string.Empty;
+
+        internal AuditAnalysisPlan Prepare(AuditAnalysisPlan plan, string identity, bool force)
+        {
+            lock (_gate)
+            {
+                if (force || _originalPlan is null || !string.Equals(_identity, identity, StringComparison.Ordinal))
+                {
+                    _identity = identity;
+                    _originalPlan = plan;
+                    _completed.Clear();
+                    _issues.Clear();
+                    _checkpointModel = _checkpointRoute = string.Empty;
+                }
+                _activePlan = _originalPlan with
+                {
+                    RequestedIndices = _originalPlan.RequestedIndices.Where(index => !_completed.Contains(index)).ToArray(),
+                    ReusedIssues = DeduplicateIssues(_originalPlan.ReusedIssues.Concat(_issues)),
+                    UsedModel = JoinProvenance(_originalPlan.UsedModel, _checkpointModel),
+                    UsedRoute = JoinProvenance(_originalPlan.UsedRoute, _checkpointRoute),
+                };
+                return _activePlan;
+            }
+        }
+
+        internal void Checkpoint(AuditAnalysisPlan plan, string identity, AuditIssueContainer batch, IReadOnlySet<string> inputIds,
+            string usedModel = "", string usedRoute = "")
+        {
+            lock (_gate)
+            {
+                if (_identity != identity || _originalPlan is null || !ReferenceEquals(plan, _activePlan))
+                {
+                    return;
+                }
+                var indices = new List<int>();
+                foreach (string id in inputIds)
+                {
+                    if (!id.StartsWith("item-", StringComparison.Ordinal) || !int.TryParse(id.AsSpan(5), out int index)
+                        || index < 1 || index > plan.RequestedIndices.Length)
+                    {
+                        return;
+                    }
+                    indices.Add(plan.RequestedIndices[index - 1]);
+                }
+                if (indices.All(_completed.Contains))
+                {
+                    return;
+                }
+                _issues.AddRange(batch.Issues.Select(plan.RestoreReference));
+                _completed.UnionWith(indices);
+                _checkpointModel = JoinProvenance(_checkpointModel, usedModel);
+                _checkpointRoute = JoinProvenance(_checkpointRoute, usedRoute);
+            }
+        }
+
+        internal void Complete(AuditAnalysisPlan plan, string identity)
+        {
+            lock (_gate)
+            {
+                if (_identity != identity || !ReferenceEquals(plan, _activePlan))
+                {
+                    return;
+                }
+                _originalPlan = null;
+                _activePlan = null;
+                _completed.Clear();
+                _issues.Clear();
+                _checkpointModel = _checkpointRoute = string.Empty;
+            }
+        }
+    }
+
+    // Schema callbacks run before the engine identifies the successful route. Keep their
+    // checkpoints local until final provenance is known; cancellation discards this buffer.
+    internal sealed class AuditCheckpointBuffer
+    {
+        private readonly List<(AuditIssueContainer Batch, IReadOnlySet<string> InputIds)> _batches = [];
+
+        internal void Stage(AuditIssueContainer batch, IReadOnlySet<string> inputIds)
+        {
+            lock (_batches)
+            {
+                _batches.Add((batch, inputIds.ToHashSet(StringComparer.Ordinal)));
+            }
+        }
+
+        internal void Commit(AuditAnalysisRetryState? retry, AuditAnalysisPlan plan, string identity, AuditAnalysisResult result)
+        {
+            if (retry is null || !result.MatchesRequestedModel || result.Issues is null)
+            {
+                return;
+            }
+            lock (_batches)
+            {
+                foreach (var (batch, ids) in _batches)
+                {
+                    retry.Checkpoint(plan, identity, batch, ids, result.UsedModel, result.UsedRoute);
+                }
+                _batches.Clear();
+            }
+        }
     }
 
     /// <summary>
@@ -118,6 +241,7 @@ public static class AiHubAuditAnalysisService
         IProgress<AuditAnalysisResult>? partialResults = null,
         AuditAnalysisCache? cache = null,
         bool forceReanalyze = false,
+        AuditAnalysisRetryState? retryState = null,
         CancellationToken cancellationToken = default)
     {
         if (events is null || events.Count == 0)
@@ -136,17 +260,43 @@ public static class AiHubAuditAnalysisService
         // window and silently ignore every later one.
         List<SecurityEvent> selected = SelectEvidence(events);
         var inputs = selected.Select(ToInput).ToArray();
+        string requestedModel = new AiHubSettingsStore().Load().GetMainTarget()?.Model?.Trim() ?? string.Empty;
         string scope = await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false);
         cache ??= new AuditAnalysisCache();
         var (plan, items) = PrepareAnalysisRequest(cache, scope, inputs, forceReanalyze);
+        if (plan.RequestedIndices.Length < inputs.Length && !IsRequestedModel(plan.UsedModel, plan.UsedRoute, requestedModel))
+        {
+            (plan, items) = PrepareAnalysisRequest(cache, scope, inputs, forceReanalyze: true);
+        }
+        string evidenceFingerprint = CreateEvidenceFingerprint(events);
+        string retryIdentity = scope + ":" + evidenceFingerprint;
+        if (retryState is not null)
+        {
+            plan = retryState.Prepare(plan, retryIdentity, forceReanalyze);
+            if (plan.RequestedIndices.Length < inputs.Length && !IsRequestedModel(plan.UsedModel, plan.UsedRoute, requestedModel))
+            {
+                (plan, _) = PrepareAnalysisRequest(cache, scope, inputs, forceReanalyze: true);
+                plan = retryState.Prepare(plan, retryIdentity, force: true);
+            }
+            items = plan.RequestedIndices.Select(index => inputs[index]).ToList();
+        }
 
         if (items.Count == 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            cache.Commit(plan, plan.ReusedIssues);
-            return new(plan.ReusedIssues, false, null) { ReusedEvents = selected.Count };
+            string completedScope = await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(scope, completedScope, StringComparison.Ordinal))
+            {
+                return new(null, true, "AnalysisScopeChanged") { Scope = scope, EvidenceFingerprint = evidenceFingerprint };
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            cache.Commit(plan, plan.ReusedIssues, plan.UsedModel, plan.UsedRoute);
+            retryState?.Complete(plan, retryIdentity);
+            return CachedAnalysis(plan, requestedModel, evidenceFingerprint);
         }
 
+        var packed = AuditEvidencePacking.Create(items);
+        int packedBytes = packed.Items.Sum(item => JsonSerializer.SerializeToUtf8Bytes(item, AIHubLibJsonContext.Default.EventAnalysisInput).Length);
         string initialStatus = IsChinese
             ? $"正在请求 AI 深度分析（{items.Count} 条事件）..."
             : $"Requesting AI deep analysis for {items.Count} event(s)...";
@@ -154,61 +304,64 @@ public static class AiHubAuditAnalysisService
 
         string analysisId = Guid.NewGuid().ToString("N")[..8];
         var stopwatch = Stopwatch.StartNew();
-        Logger.LogInfo($"AI audit started: id={analysisId}, collected={events.Count}, selected={items.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, batchSize={AnalysisBatchSize}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
+        Logger.LogInfo($"AI audit started: id={analysisId}, collected={events.Count}, selected={selected.Count}, requested={items.Count}, packedRecords={packed.Items.Count}, packedBytes={packedBytes}, reused={selected.Count - items.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, batchSize={AnalysisBatchSize}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
         var batchProgress = new AuditProgress(analysisId, stopwatch, progress);
         var validatedIssues = new List<AuditIssue>(plan.ReusedIssues);
         int validatedBatchCount = 0;
         var partialLock = new object();
         string outcome = "failed";
+        var checkpoints = new AuditCheckpointBuffer();
         try
         {
             AiTaskResult<AuditIssueContainer> result = await AiHubEngine.Current.ExecuteTaskAsync(
                 PluginId,
                 TaskId,
-                items,
+                packed.Items,
                 CreateSchema(batch =>
                 {
                     lock (partialLock)
                     {
-                        validatedIssues.AddRange(batch.Issues.Select(plan.RestoreReference));
+                        validatedIssues.AddRange(batch.Issues.Select(packed.RestoreIssue).Select(plan.RestoreReference));
                         partialResults?.Report(new(DeduplicateIssues(validatedIssues), true, null) { ValidatedBatchCount = ++validatedBatchCount });
                     }
-                }),
-                new AiTaskOptions
-                {
-                    Language = Language,
-                    TimeoutSeconds = AnalysisTimeoutSeconds,
-                    BatchSize = AnalysisBatchSize,
-                    RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
-                    Progress = batchProgress,
-                    AllowPartialResults = true,
-                },
+                }, (batch, inputIds) => checkpoints.Stage(packed.RestoreBatch(batch), packed.ExpandReferences(inputIds))),
+                CreateAnalysisOptions(batchProgress),
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             outcome = result.IsSuccess ? "ok" : result.HasPartialResult ? "partial" : "failed";
-            var analysis = ReadAnalysisResult(result, analysisId);
+            var analysis = ApplyExecutionProvenance(ReadAnalysisResult(result, analysisId), result, requestedModel);
+            checkpoints.Commit(retryState, plan, retryIdentity, analysis);
             if (analysis.Issues is not null)
             {
                 analysis = analysis with
                 {
-                    Issues = DeduplicateIssues(plan.ReusedIssues.Concat(analysis.Issues.Select(plan.RestoreReference))),
+                    Issues = DeduplicateIssues(plan.ReusedIssues.Concat(analysis.Issues.Select(packed.RestoreIssue).Select(plan.RestoreReference))),
                     ReusedEvents = selected.Count - items.Count,
                     AnalyzedEvents = items.Count,
+                    UsedModel = JoinProvenance(selected.Count > items.Count ? plan.UsedModel : string.Empty, analysis.UsedModel),
+                    UsedRoute = JoinProvenance(selected.Count > items.Count ? plan.UsedRoute : string.Empty, analysis.UsedRoute),
                 };
                 if (!analysis.IsPartial && analysis.Failure is null)
                 {
-                    if (string.Equals(scope, await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false), StringComparison.Ordinal))
+                    analysis = ConfirmEvidenceCoverage(analysis, selected.Count, scope, await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false));
+                    if (analysis.CompleteEvidenceCoverage && analysis.MatchesRequestedModel && analysis.Issues is not null)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        cache.Commit(plan, analysis.Issues);
+                        CommitCompletedAnalysis(cache, plan, analysis);
+                        retryState?.Complete(plan, retryIdentity);
                     }
                 }
             }
             else if (plan.ReusedIssues.Count > 0)
             {
-                analysis = analysis with { Issues = plan.ReusedIssues, IsPartial = true, ReusedEvents = selected.Count - items.Count, AnalyzedEvents = items.Count };
+                analysis = analysis with
+                {
+                    Issues = plan.ReusedIssues, IsPartial = true, ReusedEvents = selected.Count - items.Count, AnalyzedEvents = items.Count,
+                    UsedModel = plan.UsedModel, UsedRoute = plan.UsedRoute,
+                    MatchesRequestedModel = IsRequestedModel(plan.UsedModel, plan.UsedRoute, requestedModel),
+                };
             }
-            return analysis;
+            return analysis with { Scope = ResultScope(scope, analysis), EvidenceFingerprint = evidenceFingerprint };
         }
         catch (OperationCanceledException)
         {
@@ -224,6 +377,70 @@ public static class AiHubAuditAnalysisService
         {
             Logger.LogInfo($"AI audit finished: id={analysisId}, outcome={outcome}, elapsedMs={stopwatch.ElapsedMilliseconds}");
         }
+    }
+
+    internal static AiTaskOptions CreateAnalysisOptions(IProgress<AiTaskProgress>? progress) => new()
+    {
+        Language = Language,
+        TimeoutSeconds = AnalysisTimeoutSeconds,
+        BatchSize = AnalysisBatchSize,
+        RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
+        AllowTimeoutFailover = false,
+        Progress = progress,
+        AllowPartialResults = true,
+    };
+
+    internal static bool IsRequestedModel(string usedModel, string usedRoute, string requestedModel) =>
+        !string.IsNullOrWhiteSpace(requestedModel)
+        && string.Equals(usedModel, requestedModel, StringComparison.Ordinal)
+        && string.Equals(usedRoute, "Main", StringComparison.Ordinal);
+
+    internal static AuditAnalysisResult CachedAnalysis(AuditAnalysisPlan plan, string requestedModel, string evidenceFingerprint) => new(plan.ReusedIssues, false, null)
+    {
+        ReusedEvents = plan.Identities.Length,
+        Scope = plan.Scope,
+        EvidenceFingerprint = evidenceFingerprint,
+        CompleteEvidenceCoverage = true,
+        UsedModel = plan.UsedModel,
+        UsedRoute = plan.UsedRoute,
+        MatchesRequestedModel = IsRequestedModel(plan.UsedModel, plan.UsedRoute, requestedModel),
+    };
+
+    internal static bool CommitCompletedAnalysis(AuditAnalysisCache cache, AuditAnalysisPlan plan, AuditAnalysisResult result)
+    {
+        if (!result.CompleteEvidenceCoverage || !result.MatchesRequestedModel || result.IsPartial || result.Failure is not null || result.Issues is null)
+        {
+            return false;
+        }
+        cache.Commit(plan, result.Issues, result.UsedModel, result.UsedRoute);
+        return true;
+    }
+
+    internal static AuditAnalysisResult ApplyExecutionProvenance(AuditAnalysisResult analysis,
+        AiTaskResult<AuditIssueContainer> execution, string requestedModel) => analysis with
+    {
+        UsedModel = execution.Payload is not null ? execution.UsedModel : string.Empty,
+        UsedRoute = execution.Payload is not null ? execution.UsedRoute : string.Empty,
+        MatchesRequestedModel = execution.Payload is not null && IsRequestedModel(execution.UsedModel, execution.UsedRoute, requestedModel),
+    };
+
+    internal static string ResultScope(string requestedScope, AuditAnalysisResult result) => result.MatchesRequestedModel
+        ? requestedScope
+        : requestedScope + ":actual:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(result.UsedRoute + "\0" + result.UsedModel)));
+
+    private static string JoinProvenance(string first, string second) => string.Join(" + ",
+        new[] { first, second }.Where(value => !string.IsNullOrWhiteSpace(value))
+            .SelectMany(value => value.Split(" + ", StringSplitOptions.RemoveEmptyEntries)).Distinct(StringComparer.Ordinal));
+
+    internal static AuditAnalysisResult ConfirmEvidenceCoverage(AuditAnalysisResult result, int selectedCount, string requestedScope, string completedScope)
+    {
+        if (result.Issues is null || result.IsPartial || result.Failure is not null)
+        {
+            return result with { CompleteEvidenceCoverage = false };
+        }
+        bool complete = selectedCount > 0 && result.AnalyzedEvents + result.ReusedEvents == selectedCount
+            && !string.IsNullOrEmpty(requestedScope) && string.Equals(requestedScope, completedScope, StringComparison.Ordinal);
+        return result with { CompleteEvidenceCoverage = complete, IsPartial = !complete, Failure = complete ? null : "AnalysisCoverageChanged" };
     }
 
     private static AuditAnalysisResult ReadAnalysisResult(AiTaskResult<AuditIssueContainer> result, string analysisId)
@@ -303,7 +520,8 @@ public static class AiHubAuditAnalysisService
                 };
                 string stage = value.Stage is "Prepare" or "Queue" or "Execute" or "Route" or "Failover" or "Validate" or "Failed" or "Cancelled" ? value.Stage : "Other";
                 string diagnostic = NetMapAiService.FormatRouteDiagnostic(value.StatusMessage);
-                Logger.LogInfo($"AI audit progress: id={analysisId}, stage={stage}, batches={_completed}/{_total}, failed={_failed}, active={value.ActiveBatches}, queued={value.QueuedBatches}, elapsedMs={current.ElapsedMilliseconds}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
+                string route = SafeFailureRoute(value.Route);
+                Logger.LogInfo($"AI audit progress: id={analysisId}, stage={stage}, batch={value.BatchIndex}, route={route}, batches={_completed}/{_total}, failed={_failed}, active={value.ActiveBatches}, queued={value.QueuedBatches}, elapsedMs={current.ElapsedMilliseconds}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
                 progress?.Report(current with { StatusMessage = AiTaskProgressText.Summary(current, IsChinese) });
             }
         }
@@ -313,13 +531,22 @@ public static class AiHubAuditAnalysisService
     /// Schema for the built-in security-audit chain: source-generated JSON metadata for
     /// the input/output pair, plus semantic validation of the returned issues.
     /// </summary>
-    internal static AiTaskSchema<EventAnalysisInput, AuditIssueContainer> CreateSchema(Action<AuditIssueContainer>? reportValidatedBatch = null)
+    internal static AiTaskSchema<EventAnalysisInput, AuditIssueContainer> CreateSchema(Action<AuditIssueContainer>? reportValidatedBatch = null,
+        Action<AuditIssueContainer, IReadOnlySet<string>>? checkpointValidatedBatch = null)
     {
         return new AiTaskSchema<EventAnalysisInput, AuditIssueContainer>
         {
             InputTypeInfo = AIHubLibJsonContext.Default.EventAnalysisInput,
             OutputTypeInfo = AIHubLibJsonContext.Default.AuditIssueContainer,
-            ValidateOutput = ValidateOutput,
+            ValidateOutput = (output, ids) =>
+            {
+                if (!ValidateOutput(output, ids))
+                {
+                    return false;
+                }
+                checkpointValidatedBatch?.Invoke(output, ids);
+                return true;
+            },
             ReportValidatedBatch = reportValidatedBatch,
 
             // Large event windows are split at the record and encoded-size limits,
@@ -401,6 +628,10 @@ public static class AiHubAuditAnalysisService
             if (AuditAnalysisCache.GetNarrativeReferences(issue).Any(reference => !itemIds.Contains(reference)))
             {
                 return RejectOutput(issueIndex, "text", "unknown_input_reference");
+            }
+            if (issue.RemediationPlan is not null && !issue.RemediationPlan.IsValid)
+            {
+                return RejectOutput(issueIndex, "remediationPlan", "incomplete_or_too_long");
             }
         }
 
@@ -494,18 +725,18 @@ public static class AiHubAuditAnalysisService
         return (plan, plan.RequestedIndices.Select(index => inputs[index]).ToList());
     }
 
-    private static async Task<string> ReadAnalysisScopeAsync(CancellationToken cancellationToken)
+    internal static async Task<string> ReadAnalysisScopeAsync(CancellationToken cancellationToken)
     {
         var policy = new SecurityPolicyService();
         string globalPolicy = await policy.LoadGlobalPolicyAsync(cancellationToken).ConfigureAwait(false);
         string taskPolicy = await policy.LoadTaskAgentsPolicyAsync(PluginId, TaskId, cancellationToken).ConfigureAwait(false);
         string taskSecurity = await policy.LoadTaskSecurityPolicyAsync(PluginId, TaskId, cancellationToken).ConfigureAwait(false);
         string configurationHash = CreateConfigurationFingerprint(new AiHubSettingsStore().Load());
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\0", "audit-v3", Language,
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\0", "audit-v5-provenance", Language,
             configurationHash, globalPolicy, taskPolicy, taskSecurity))));
     }
 
-    private static List<SecurityEvent> SelectEvidence(IReadOnlyList<SecurityEvent> events) => events
+    internal static List<SecurityEvent> SelectEvidence(IReadOnlyList<SecurityEvent> events) => events
         .OrderByDescending(e => e.Level is <= 2)
         .ThenByDescending(e => e.TimeCreated ?? DateTime.MinValue)
         .Take(MaxEventsPerRequest)
@@ -529,7 +760,7 @@ public static class AiHubAuditAnalysisService
             Provider = source.ProviderName ?? string.Empty,
             Level = source.Level,
             TimeUtc = source.TimeCreated?.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture) ?? string.Empty,
-            Summary = Truncate(source.Message, 1_024),
+            Summary = Truncate(source.Message, AuditEvidencePacking.SummaryCharacterLimit),
         };
     }
 

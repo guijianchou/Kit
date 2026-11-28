@@ -2453,7 +2453,7 @@
     <value>任务策略内容</value>
   </data>
   <data name="AIHub_FastScanLabel" xml:space="preserve">
-    <value>快速扫描</value>
+    <value>快速刷新</value>
   </data>
   <data name="AIHub_FullScanLabel" xml:space="preserve">
     <value>全量审计</value>
@@ -2828,16 +2828,16 @@
     <value>完整模式需要管理员权限；当前未提权，Security 通道将不可读</value>
   </data>
   <data name="AIHub_FullScanRangeHint" xml:space="preserve">
-    <value>选择时间范围并更新本地发现</value>
+    <value>选择时段后自动加载对应发现</value>
   </data>
   <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
     <value>2D · 2 天</value>
   </data>
   <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
-    <value>1W · 1 周</value>
+    <value>7D · 7 天</value>
   </data>
   <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
-    <value>1M · 30 天</value>
+    <value>30D · 30 天</value>
   </data>
   <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
     <value>扫描选项</value>
@@ -4416,5 +4416,104 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   </data>
   <data name="Dashboard_UpdateTitle.Text" xml:space="preserve">
     <value>Kit Update</value>
+  </data>
+  <data name="AIHub_ReportDetails" xml:space="preserve">
+    <value>完整问题与处理方案</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisTitle" xml:space="preserve">
+    <value>系统诊断</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisAction" xml:space="preserve">
+    <value>分析系统</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisDescription" xml:space="preserve">
+    <value>综合分析存储占用、CPU 与内存样本、启动项及已有审计结果，给出检查建议、收益代价和验证步骤。</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisCollecting" xml:space="preserve">
+    <value>正在采集系统证据…</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisAnalyzing" xml:space="preserve">
+    <value>正在分析系统证据…</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisComplete" xml:space="preserve">
+    <value>系统诊断完成，请查看报告后选择需要处理的事项。</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisFailed" xml:space="preserve">
+    <value>AI 诊断未完成（{0}）。已有有效报告将保留。</value>
+  </data>
+  <data name="AIHub_SystemDiagnosisCancelled" xml:space="preserve">
+    <value>诊断已取消，原有报告已保留。</value>
+  </data>
+  <data name="FindingDetails_CheckFirst" xml:space="preserve">
+    <value>1 · 先检查，再判断</value>
+  </data>
+  <data name="FindingDetails_ConditionalAction" xml:space="preserve">
+    <value>2 · 满足条件后处理</value>
+  </data>
+  <data name="FindingDetails_VerifyResult" xml:space="preserve">
+    <value>3 · 验证处理结果</value>
+  </data>
+  <data name="FindingDetails_RiskRecovery" xml:space="preserve">
+    <value>变更前确认 · 影响与恢复</value>
+  </data>
+  <data name="FindingDetails_PlanBasis" xml:space="preserve">
+    <value>按下列条件选择步骤；审计尚未执行这些操作。</value>
+  </data>
+  <data name="FindingDetails_LocalGuide" xml:space="preserve">
+    <value>基于已保存事件的本地诊断指引；确认原因后再选择处理方式。</value>
+  </data>
+  <data name="FindingDetails_PreviousAdvice" xml:space="preserve">
+    <value>原记录中的建议</value>
+  </data>
+  <data name="NetMap_MapNavigationHint" xml:space="preserve">
+    <value>拖动平移 · Ctrl + 滚轮缩放</value>
+  </data>
+  <data name="NetMap_MapScaleHint" xml:space="preserve">
+    <value>地图中心附近的近似距离</value>
+  </data>
+  <data name="AIHub_FullScan_Loading" xml:space="preserve">
+    <value>正在重新读取所选时段的 Windows 日志…</value>
+  </data>
+  <data name="AIHub_QuickRefresh_Loading" xml:space="preserve">
+    <value>正在复用已采集事件并读取缺失区间及近期增量…</value>
+  </data>
+  <data name="AIHub_FullScan_Hint" xml:space="preserve">
+    <value>完整扫描会重新读取所选时段，再使用当前 AI 模型更新审计结论。</value>
+  </data>
+  <data name="AIHub_FullScan_NoEvents" xml:space="preserve">
+    <value>日志采集结束，该时段没有可分析事件，AI 未运行。</value>
+  </data>
+  <data name="AIHub_FullScan_AiUnavailable" xml:space="preserve">
+    <value>日志采集结束，但 AI 服务不可用，AI 未运行。请配置或启用服务后重试 AI 报告。</value>
+  </data>
+  <data name="AIHub_FullScan_PreviousReport" xml:space="preserve">
+    <value> 上次完整 AI 报告仍然保留。</value>
+  </data>
+  <data name="AIHub_QuickRefresh_Hint" xml:space="preserve">
+    <value>快速刷新会复用已采集事件，读取缺失区间及近期增量。</value>
+  </data>
+  <data name="AIHub_AuditScan_HistoricalWindowFormat" xml:space="preserve">
+    <value>历史窗口截止于 {0:g}。选择“最新”后可扫描截至当前的事件。</value>
+  </data>
+  <data name="AIHub_AuditScan_LiveWindow" xml:space="preserve">
+    <value>扫描窗口截止于当前时间。</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Loading" xml:space="preserve">
+    <value>正在加载所选时段</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Loaded" xml:space="preserve">
+    <value>时段已加载</value>
+  </data>
+  <data name="AIHub_AuditPeriod_Cached" xml:space="preserve">
+    <value>已缓存时段</value>
+  </data>
+  <data name="AIHub_AuditPeriod_CachedFormat" xml:space="preserve">
+    <value>正在显示 {0} 天的已缓存证据（{1} 条事件）。</value>
+  </data>
+  <data name="AIHub_AuditScan_ResultFormat" xml:space="preserve">
+    <value>{0} · {1} 天 · 本次读取 {2} 条 · 复用 {3} 条 · {4} 个区间 · {5:N0} 毫秒</value>
+  </data>
+  <data name="AIHub_AuditElapsed_UnderSecond" xml:space="preserve">
+    <value>不足 1 秒</value>
   </data>
 </root>

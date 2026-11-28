@@ -141,6 +141,8 @@ public sealed class CacheCleanupService
 
     private static bool MatchesLocationFilter(FileInfo file, CacheLocation location, string root)
     {
+        if (OptimizationProtectionPolicy.IsProtectedFromCleanup(file.FullName)) return false;
+
         if (location.ThumbnailsOnly)
         {
             return string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase) &&
@@ -415,7 +417,7 @@ public sealed class CacheCleanupService
         if (_developmentRoot != null && !IsProtectedCorePath(_developmentRoot))
         {
             results.AddRange(DevelopmentCacheScanner.Scan(_developmentRoot, 200000 - results.Count, cancellationToken)
-                .Where(item => !IsProtectedCorePath(item.FilePath)));
+                .Where(item => !IsProtectedCorePath(item.FilePath) && !OptimizationProtectionPolicy.IsProtectedFromCleanup(item.FilePath)));
         }
         if (results.Count >= 200000) ScanTruncated = true;
         for (int index = 0; index < results.Count; index++)
@@ -498,6 +500,8 @@ public sealed class CacheCleanupService
         try
         {
             var file = new FileInfo(item.FilePath);
+            if (OptimizationProtectionPolicy.IsProtectedFromCleanup(file.FullName))
+                return (false, false, "User documents, credentials, configuration and backups are protected. / 用户文档、凭据、配置和备份受保护。");
             if (IsProtectedCorePath(file.FullName))
                 return (false, false, "Core system and installed application files are protected. / 核心系统及已安装应用文件受保护。");
             var matchedLocation = Array.Find(_whitelist, location => MatchesLocation(file, location));

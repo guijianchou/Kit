@@ -4,6 +4,20 @@
 
 ## English
 
+### 3.6.8 (2026-11-27)
+
+Consolidates the changes developed in 3.6.4–3.6.8 since the 3.6.3 release.
+
+- **Audit periods and report actions:** selecting 2D, 7D or 30D automatically loads evidence, reuses covered intervals and collects only missing ranges. Use one report action to generate, view, update or retry; remove the separate regenerate and scan-selected-period entries. Split audit state, range handling, findings and report presentation into dedicated components.
+- **Complete Full scan workflow:** reread the entire selected period and then invoke the current AI model through the shared service. Keep one timer and cancellation path through collection and analysis; only mark the workflow complete after a complete AI result. Explicitly report unavailable AI or empty evidence, and log collection windows, read/reused counts and the final AI outcome separately.
+- **Reliable report replacement:** complete AI reviews replace earlier judgments for the evidence they cover, including reduced severity and dismissed findings. Model/configuration changes invalidate analysis reuse; record the successful models/routes and keep fallback or mixed results out of the primary-model completion cache. Replace the same scan's pending history contribution, preserve unreviewed evidence and other dates, and retain the previous complete report after partial, failed or cancelled replacement.
+- **Audit batching and deadlines:** group exact duplicate events while preserving every occurrence timestamp and original evidence reference; process up to 64 groups per batch within the input-size limit and avoid duplicating remediation text. Allow 900 seconds per audit route within the 1,800-second task deadline. A local route deadline no longer silently switches a slow primary audit to a fallback model; eligible endpoint failures can still use the configured fallback. Preserve the selected model, reasoning effort, context configuration and service concurrency.
+- **Actionable findings and period reports:** new and saved findings include component-specific checks, conditional remedies, impact/recovery notes and outcome verification. Weekly/monthly reports lead with an overview, coverage gaps, recurring issues and priority actions, with complete findings loaded on demand. Preserve archived coverage and withhold comparisons between scores based on different evidence.
+- **Broader system diagnosis and file protection:** add advisory analysis of bounded storage summaries, CPU/memory samples, startup counts and existing audit evidence. File operations remain separately reviewed and confirmed; enforce document, credential and configuration protection during scanning, AI output validation and execution.
+- **Native analysis tool restrictions:** disable advisory-worker tool capabilities in both feature settings and the native model catalog, preventing model-level code mode from reintroducing execution, input or goal tools. Preserve inference settings and host output validation.
+- **NetMap and AI Usage:** add more detailed offline geography, country/city labels, a distance scale and direct map navigation. Give AI Usage metrics distinct theme-aware colors, clearer hierarchy and layouts that adapt to narrow windows.
+- **Validation:** x64 Debug builds with zero warnings/errors; 729 AI Hub core tests, 460 Settings tests and English/Chinese WinUI checks pass. A real 7D audit analyzed all 292 events through Astra/Main without fallback and produced 27 findings with remediation plans. It took 12 minutes 24 seconds at `max` effort, so large audits still have a substantial waiting cost. Real Windows event collection verified interval reuse across 2D/7D/30D; actual period-button automation remained blocked by a window-binding error.
+
 ### 3.6.3 (2026-11-26)
 
 - Aligned the Home top-right `Kit Update` control with the subtitle baseline (`Monitor your system...`) and redesigned its icon badge with theme-adaptive translucent accent/semantic surfaces and crisp Fluent strokes unified across Light, Dark, and High Contrast themes.
@@ -1049,6 +1063,20 @@
 ## 中文
 
 ## 更新日志
+
+### 3.6.8（2026-11-27）
+
+合并自 3.6.3 发布后，在 3.6.4–3.6.8 开发期间完成的更新。
+
+- **审计时段与报告入口：**选择 2D、7D 或 30D 自动加载证据，复用已覆盖区间，仅补采缺失范围。报告统一使用生成、查看、更新或重试入口，移除独立的重新生成与补全所选时段按钮；审计状态、时段处理、问题与报告展示拆分为独立组件。
+- **完整扫描链路：**Full scan 重新读取整个选定时段，再通过共享服务调用当前 AI 模型；采集与分析共用计时和取消操作，完整 AI 结果返回后才标记流程完成。AI 不可用或没有证据时明确说明，日志分别记录采集窗口、读取/复用数量与最终 AI 结果。
+- **可靠的报告替换：**完整 AI 复核替换其覆盖证据的旧判定，包括降低严重程度和排除误报。模型或相关配置变化会使分析缓存失效；报告记录成功产出结果的模型/路由，备用或混合结果不充当主模型完整分析缓存。同次扫描的待分析历史由最终结果替换，保留未覆盖证据及其他日期；部分完成、失败或取消时保留上次完整报告。
+- **审计分批与时间预算：**完全相同的重复事件合组，保留每次发生时间与原始证据引用；每批最多 64 组，并受输入大小限制，减少重复整改文本。单路由预算为 900 秒，整体任务为 1,800 秒；本地路由超时不再悄悄将慢速主模型切换为备用模型，符合条件的端点故障仍可使用已配置的备用路由。保留所选模型、推理强度、上下文配置与服务并发。
+- **可执行的整改建议与周期报告：**新旧问题均提供按来源组件匹配的检查、条件处理、影响与恢复说明、结果验证。周报/月报先展示全局总览、覆盖缺口、重复问题与优先行动，再按需加载完整发现；保留归档覆盖信息，不比较证据口径不同的分数。
+- **扩展系统诊断与文件保护：**新增建议型系统分析，综合有界存储摘要、CPU/内存样本、启动项统计及已有审计证据。文件操作仍单独审核和确认，扫描、AI 输出校验与执行各阶段均保护文档、凭据及配置。
+- **原生分析工具限制：**同时关闭功能开关与 native 模型目录中的工具能力，避免模型级 code mode 重新引入执行器、输入或目标管理工具；保留推理配置与宿主输出验证。
+- **NetMap 与 AI Usage：**地图增加离线地理细节、国家/城市标注、距离标尺和直接导航；AI Usage 指标采用主题自适应区分色，改善信息层级与窄窗口布局。
+- **验证：**x64 Debug 构建零警告、零错误；729 项 AI Hub 核心测试、460 项 Settings 测试及中英文 WinUI 检查通过。真实 7D 审计通过 Astra/Main 重新分析全部 292 条事件，未降级，27 项发现均有整改计划；`max` 强度下耗时 12 分 24 秒，大范围审计仍有明显等待成本。真实 Windows 日志验证了 2D/7D/30D 的区间复用；实际周期按钮自动化仍受窗口绑定错误限制。
 
 ### 3.6.3（2026-11-26）
 

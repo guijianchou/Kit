@@ -80,8 +80,43 @@ public sealed partial class AIHubPageViewModel
         AuditResult snapshot,
         bool interim)
     {
+        if (!interim && result.Failure is not null && result.Issues is not null)
+        {
+            result = result with { CompleteEvidenceCoverage = false, IsPartial = true };
+        }
+        if (!interim && _fullScanLogContext is not null && result.Issues is not null && !result.CompleteEvidenceCoverage)
+        {
+            result = result with { IsPartial = true };
+        }
+        if (!interim && result.CompleteEvidenceCoverage
+            && !string.Equals(result.EvidenceFingerprint, AiHubAuditAnalysisService.CreateEvidenceFingerprint(events), StringComparison.Ordinal))
+        {
+            result = result with { CompleteEvidenceCoverage = false, IsPartial = true, Failure = "AnalysisEvidenceChanged" };
+        }
+        if (_retainingAiReport && (interim || result.Issues is null || result.IsPartial || !result.CompleteEvidenceCoverage))
+        {
+            if (interim)
+            {
+                AiStatusText = PreferChinese() ? "新分析仍在进行；继续显示上次完整报告。" : "The new analysis is running; the last complete report remains available.";
+                return;
+            }
+            _lastAuditAnalysisAttempt = result.IsPartial ? "partial" : "failed";
+            _auditIncomplete = true;
+            _persistCurrentAudit = false;
+            _retainingAiReport = false;
+            AuditPhase = ScanPhase.Failed;
+            FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            AiAnalysisRanText = AuditStatusText = AiStatusText = PreferChinese()
+                ? "本次分析未完成，已保留上次完整报告。可重试分析。"
+                : "This analysis did not complete. The previous complete report was retained; retry is available.";
+            ShowStatus(AiStatusText, InfoBarSeverity.Warning);
+            RefreshAuditActions();
+            return;
+        }
+
         if (result.Issues is null)
         {
+            _lastAuditAnalysisAttempt = "failed";
             AiStatusText = "AIHub_DeepAnalysis_IncompleteFormat".FormatLocalized("AI analysis did not complete: {0}", result.Failure);
             AiAnalysisRanText = AuditStatusText = AiStatusText;
             if (HasAiReport)
@@ -102,9 +137,12 @@ public sealed partial class AIHubPageViewModel
         }
 
         var issues = AiHubAuditAnalysisService.DeduplicateIssues(result.Issues);
-        var merged = MergeIssues(ruleIssues, issues, events);
-        _auditMergedSummary = "AIHub_AuditMergedSummaryFormat".FormatLocalized(
-            "Local rules: {0} · AI findings: {1} · After merging: {2}", ruleIssues.Count, issues.Count, merged.Count);
+        bool replaceReviewedEvidence = !interim && !result.IsPartial && result.Failure is null && result.CompleteEvidenceCoverage;
+        var merged = MergeIssues(ruleIssues, issues, events, replaceReviewedEvidence);
+        _auditMergedSummary = replaceReviewedEvidence
+            ? PreferChinese() ? $"AI 已完成所选证据复核，以最终判定更新本次审计；未覆盖事件保留本地判断。当前共 {merged.Count} 项问题。"
+                : $"AI completed its selected evidence review and updated this audit. Unreviewed events retain local findings. {merged.Count} findings remain."
+            : "AIHub_AuditMergedSummaryFormat".FormatLocalized("Local rules: {0} · AI findings: {1} · After merging: {2}", ruleIssues.Count, issues.Count, merged.Count);
         AllIssues.Clear();
         foreach (var issue in merged)
         {
@@ -123,6 +161,7 @@ public sealed partial class AIHubPageViewModel
         {
             snapshot.Findings = merged;
             snapshot.HealthScore = HealthScore;
+            snapshot.EventsScanned = events.Count;
             snapshot.AnalysisOutcome = interim ? "pending" : result.IsPartial ? "partial" : "ok";
         }
         RebuildSections();
@@ -138,7 +177,7 @@ public sealed partial class AIHubPageViewModel
                     PreferChinese() && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
                     PreferChinese() && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
                 }.Where(text => !string.IsNullOrWhiteSpace(text))),
-                PreferChinese() && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
+                ToEnhanced(issue).PriorityActionText,
                 issue.EventId));
         }
 
@@ -146,8 +185,9 @@ public sealed partial class AIHubPageViewModel
             ? PreferChinese() ? $"AI 分析仍在进行，已验证 {issues.Count} 项发现。" : $"AI analysis continues; {issues.Count} validated finding(s) are available."
             : result.IsPartial
                 ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", issues.Count, result.Failure)
-                : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", issues.Count);
+                : BuildAuditNarrative(merged, events.Count, result.AnalyzedEvents + result.ReusedEvents, PreferChinese());
         AiReportMetaText = "AIHub_DeepAnalysis_MetaFormat".FormatLocalized("Kernel {0} · {1:HH:mm:ss}", AiHubEngine.Current.ActiveKernel, DateTime.Now);
+        AiReportMetaText += " · " + AuditModelProvenance(result, PreferChinese());
         if (!interim)
         {
             AiReportMetaText += PreferChinese()
@@ -156,11 +196,13 @@ public sealed partial class AIHubPageViewModel
         }
         if (snapshot is not null)
         {
-            snapshot.UsedModel = !string.IsNullOrWhiteSpace(CurrentEngineAndModelLabel)
-                ? CurrentEngineAndModelLabel
-                : AiHubEngine.Current.ActiveKernel ?? string.Empty;
+            snapshot.UsedModel = result.UsedModel;
             snapshot.AiReportSummary = AiReportSummaryText;
             snapshot.AiReportMeta = AiReportMetaText;
+            snapshot.AiAnalysisScope = result.Scope;
+            snapshot.AiEvidenceFingerprint = result.EvidenceFingerprint;
+            snapshot.AiAnalyzedEvents = result.AnalyzedEvents;
+            snapshot.AiReusedEvents = result.ReusedEvents;
         }
         _fluentAiReportPartial = interim || result.IsPartial;
         HasAiReport = true;
@@ -169,6 +211,19 @@ public sealed partial class AIHubPageViewModel
         {
             return;
         }
+
+        _retainingAiReport = false;
+        _lastAuditAnalysisAttempt = result.IsPartial ? "partial" : string.Empty;
+        _auditReportNeedsRefresh = !result.MatchesRequestedModel;
+        if (result.MatchesRequestedModel)
+        {
+            _knownAuditAnalysisScope = result.Scope;
+        }
+        if (ReferenceEquals(snapshot, _auditSourceSnapshot))
+        {
+            _auditSourceEvents = events.ToList();
+        }
+        EventCountText = "AIHub_EventCountFormat".FormatLocalized("{0} events", events.Count);
 
         AiStatusText = AuditStatusText = AiReportSummaryText;
         _auditIncomplete = result.IsPartial;
@@ -190,7 +245,34 @@ public sealed partial class AIHubPageViewModel
         OnPropertyChanged(nameof(CanRunDeepAnalysis));
         OnPropertyChanged(nameof(DeepAnalyzeHint));
         ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
-        ((RelayCommand)FullDeepAnalyzeCommand).OnCanExecuteChanged();
+        RefreshAuditActions();
+    }
+
+    internal static string AuditModelProvenance(AiHubAuditAnalysisService.AuditAnalysisResult result, bool chinese)
+    {
+        string model = string.IsNullOrWhiteSpace(result.UsedModel) ? chinese ? "模型待确认" : "Model unconfirmed" : result.UsedModel;
+        string route = string.IsNullOrWhiteSpace(result.UsedRoute) ? chinese ? "路由待确认" : "Route unconfirmed" : result.UsedRoute;
+        return model + " · " + route;
+    }
+
+    internal static string BuildAuditNarrative(IReadOnlyList<AuditIssueEnhanced> findings, int collected, int reviewed, bool chinese)
+    {
+        int high = findings.Count(finding => finding.IsHigh);
+        int medium = findings.Count(finding => finding.IsMedium);
+        var priorities = findings.OrderByDescending(finding => finding.IsHigh).ThenByDescending(finding => finding.IsMedium)
+            .ThenByDescending(finding => finding.Occurrences).Take(3).ToList();
+        string headline = chinese
+            ? $"本次共检查 {collected} 条事件，AI 审阅其中 {reviewed} 条。综合本地规则与 AI 发现，记录 {findings.Count} 项问题，其中高优先级 {high} 项、中优先级 {medium} 项。"
+            : $"This audit checked {collected} events; AI reviewed {reviewed}. Local rules and AI identified {findings.Count} issues, including {high} high-priority and {medium} medium-priority issues.";
+        if (priorities.Count == 0)
+        {
+            return headline + (chinese ? " 已收集的证据中未发现需要处理的问题；这不代表未采集的日志或系统状态均正常。" : " No actionable issue was identified in the collected evidence; uncollected logs and system state remain outside this assessment.");
+        }
+        string focus = string.Join(chinese ? "；" : "; ", priorities.Select(finding => chinese && !string.IsNullOrWhiteSpace(finding.TitleZh) ? finding.TitleZh : finding.Title));
+        return headline + Environment.NewLine + Environment.NewLine
+            + (chinese ? $"当前应优先核查：{focus}。先按各问题的检查步骤确认原因，再选择条件修复，并通过恢复验证确认结果。"
+                : $"Prioritize: {focus}. Confirm each cause using its diagnostic checks, choose the applicable repair, and verify recovery.")
+            + (reviewed < collected ? chinese ? " 本次 AI 未覆盖全部事件，其余事件仅经过本地规则检查。" : " AI did not review every event; remaining events received local rule checks only." : string.Empty);
     }
 
     internal static bool IsPersistedAiFinding(AuditIssueEnhanced finding) =>
@@ -204,18 +286,6 @@ public sealed partial class AIHubPageViewModel
             || string.Equals(history.AnalysisOutcome, "partial", StringComparison.OrdinalIgnoreCase))
         && (!string.IsNullOrWhiteSpace(history.AiReportSummary)
             || (history.Findings is not null && history.Findings.Any(IsPersistedAiFinding)));
-
-    internal static bool ShouldReuseCompletedAiAnalysis(
-        bool forceReanalyze,
-        bool needsEventCollection,
-        AiHubAuditAnalysisService.AuditAnalysisResult cachedAnalysis,
-        string cachedEvidence,
-        string currentEvidence) =>
-        !forceReanalyze
-        && !needsEventCollection
-        && cachedAnalysis is not null
-        && !string.IsNullOrEmpty(currentEvidence)
-        && string.Equals(cachedEvidence, currentEvidence, StringComparison.Ordinal);
 
     private void RestorePersistedAiReport(AuditResult history)
     {
@@ -258,10 +328,35 @@ public sealed partial class AIHubPageViewModel
                 : string.Empty;
         _fluentAiReportPartial = isPartial;
         HasAiReport = true;
+        _auditReportNeedsRefresh = string.IsNullOrEmpty(history.AiAnalysisScope)
+            || history.AiAnalysisScope.Contains(":actual:", StringComparison.Ordinal)
+            || (!string.IsNullOrEmpty(_knownAuditAnalysisScope) && !string.Equals(history.AiAnalysisScope, _knownAuditAnalysisScope, StringComparison.Ordinal));
+        RefreshAuditActions();
     }
 
     private void CompleteAiInterruption(AuditResult snapshot, bool cancelled)
     {
+        if (!IsAiAnalyzing && !_retainingAiReport && _lastAuditAnalysisAttempt is "cancelled" or "failed")
+        {
+            return;
+        }
+        _lastAuditAnalysisAttempt = cancelled ? "cancelled" : "failed";
+        if (_retainingAiReport)
+        {
+            _retainingAiReport = false;
+            _persistCurrentAudit = false;
+            _auditIncomplete = true;
+            AiAnalysisRanText = AuditStatusText = AiStatusText = PreferChinese()
+                ? "本次分析已停止；上次完整报告已保留。"
+                : "This analysis stopped; the previous complete report was retained.";
+            AuditPhase = ScanPhase.Failed;
+            FinishFullScanAnalysis(snapshot, cancelled ? "cancelled" : "failed");
+            FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            IsAiAnalyzing = false;
+            ShowStatus(AiStatusText, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Warning);
+            RefreshAuditActions();
+            return;
+        }
         AiStatusText = cancelled
             ? "AIHub_DeepAnalysis_Cancelled".GetLocalizedOrFallback("AI analysis cancelled")
             : "AIHub_DeepAnalysis_IncompleteFormat".FormatLocalized("AI analysis did not complete: {0}", "ExecutionFailed");
@@ -278,6 +373,7 @@ public sealed partial class AIHubPageViewModel
         }
         AuditPhase = ScanPhase.SelectingTargets;
         FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+        FinishFullScanAnalysis(snapshot, cancelled ? "cancelled" : "failed");
         IsAiAnalyzing = false;
         ShowStatus(AiStatusText, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Warning);
         PersistCurrentAudit();
@@ -287,7 +383,7 @@ public sealed partial class AIHubPageViewModel
     // snapshots so a slower local write cannot overwrite the newer AI result.
     private void PersistCurrentAudit()
     {
-        if (!_persistCurrentAudit || _auditOverviewSnapshot is not { } snapshot)
+        if (!_persistCurrentAudit || _auditOverviewSnapshot is not { } snapshot || snapshot.EvidenceIncomplete)
         {
             return;
         }
@@ -302,10 +398,16 @@ public sealed partial class AIHubPageViewModel
             ScanEnd = snapshot.ScanEnd,
             SkippedChannels = snapshot.SkippedChannels?.ToList(),
             LimitedChannels = snapshot.LimitedChannels?.ToList(),
+            CollectionProfile = snapshot.CollectionProfile,
+            EvidenceIncomplete = snapshot.EvidenceIncomplete,
             AnalysisOutcome = snapshot.AnalysisOutcome,
             UsedModel = snapshot.UsedModel,
             AiReportSummary = snapshot.AiReportSummary,
             AiReportMeta = snapshot.AiReportMeta,
+            AiAnalysisScope = snapshot.AiAnalysisScope,
+            AiEvidenceFingerprint = snapshot.AiEvidenceFingerprint,
+            AiAnalyzedEvents = snapshot.AiAnalyzedEvents,
+            AiReusedEvents = snapshot.AiReusedEvents,
         };
         _auditHistoryWriteTask = SaveAuditAfterAsync(_auditHistoryWriteTask, saved);
     }

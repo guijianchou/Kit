@@ -64,6 +64,7 @@ public sealed partial class AIHubPageViewModel
 
     private void RefreshInventoryCommands()
     {
+        RefreshDiagnosisCommands();
         _analyzeStorageCommand?.OnCanExecuteChanged();
         OnPropertyChanged(nameof(CanAnalyzeStorage));
     }
@@ -81,6 +82,7 @@ public sealed partial class AIHubPageViewModel
             return;
         }
 
+        _lastDiagnosticInventory = report;
         Inventory.Apply(report);
         IsInventoryScanning = false;
         InventoryStatusText = "AIHub_Inventory_StatusComplete".GetLocalizedOrFallback("Storage analysis complete.");

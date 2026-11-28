@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="MaxMind.GeoIP2" />
     <EmbeddedResource Include="Data\world.json" />
+    <EmbeddedResource Include="Data\world-detail.json" />
     <Content Include="..\assets\THIRD-PARTY-NOTICES.txt;..\assets\Apache-2.0.txt">
       <TargetPath>modules\NetMap\%(Filename)%(Extension)</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

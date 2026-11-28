@@ -402,7 +402,7 @@ public static class AuditRuleEngine
                     severity = "Medium";
                 }
 
-                issues.Add(new AuditIssueEnhanced
+                var issue = new AuditIssueEnhanced
                 {
                     Key = $"issue-{keySeq++:D4}",
 
@@ -411,6 +411,7 @@ public static class AuditRuleEngine
                     // unreachable through the source filter and pinned all channel counts at
                     // zero, so a scan that had found issues displayed none of them.
                     LogName = log,
+                    Source = provider,
 
                     EventRef = eventId.ToString(CultureInfo.InvariantCulture),
                     EventId = eventId.ToString(CultureInfo.InvariantCulture),
@@ -427,7 +428,11 @@ public static class AuditRuleEngine
                     Recommendation = recommendation,
                     RecommendationZh = recommendationZh,
                     Occurrences = count,
-                });
+                };
+                issue.RemediationPlan = AuditRemediationCatalog.Resolve(issue);
+                issue.Recommendation = issue.RemediationPlan.ConditionalAction;
+                issue.RecommendationZh = issue.RemediationPlan.ConditionalActionZh;
+                issues.Add(issue);
             }
 
             return issues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).ToList();

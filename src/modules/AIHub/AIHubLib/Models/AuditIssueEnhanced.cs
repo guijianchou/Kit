@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using System.Text.Json.Serialization;
+using Kit.AIHubLib.Services;
 
 namespace Kit.AIHubLib.Models;
 
@@ -126,24 +128,10 @@ public sealed class AuditIssueEnhanced : AuditIssue
         }
     }
 
-    public string PriorityActionText
-    {
-        get
-        {
-            if (IsChinese)
-            {
-                if (!string.IsNullOrWhiteSpace(RecommendationZh)) return RecommendationZh;
-                if (!string.IsNullOrWhiteSpace(Recommendation)) return Recommendation;
-                return "检查受影响的账户、系统服务或事件日志，排查异常原因。";
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(Recommendation)) return Recommendation;
-                if (!string.IsNullOrWhiteSpace(RecommendationZh)) return RecommendationZh;
-                return "Review the affected account, host or service and confirm whether this activity was expected.";
-            }
-        }
-    }
+    [JsonIgnore]
+    public AuditRemediationPlan EffectiveRemediationPlan => AuditRemediationCatalog.Resolve(this);
+
+    public string PriorityActionText => EffectiveRemediationPlan.Format(IsChinese);
 
     public string PriorityReasonText
     {
@@ -238,6 +226,7 @@ public sealed class AuditIssueEnhanced : AuditIssue
         Affected = baseIssue.Affected;
         RootCause = baseIssue.RootCause;
         Recommendation = baseIssue.Recommendation;
+        RemediationPlan = baseIssue.RemediationPlan?.Clone();
         TitleZh = baseIssue.TitleZh;
         DescriptionZh = baseIssue.DescriptionZh;
         RootCauseZh = baseIssue.RootCauseZh;

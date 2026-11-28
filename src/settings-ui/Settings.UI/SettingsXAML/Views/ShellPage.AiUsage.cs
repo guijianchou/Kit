@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using CommunityToolkit.WinUI.Controls;
 using Kit.AiHub.Engine;
@@ -34,7 +35,6 @@ public sealed partial class ShellPage
 {
     private const double AiUsageFlyoutWidth = 456;
     private const double AiUsageFlyoutDefaultHeight = 636;
-    private const double AiUsageFlyoutMinHeight = 460;
 
     private static readonly string[] ModelPaletteBrushKeys =
     [
@@ -48,6 +48,7 @@ public sealed partial class ShellPage
 
     private readonly object _aiUsageGate = new();
     private readonly AiUsageStore _aiUsageFallbackStore = new();
+    private readonly Windows.UI.ViewManagement.AccessibilitySettings _aiUsageAccessibility = new();
     private AiDiagnosticsStore? _aiUsageStore;
     private AiUsageStore? _aiUsagePersistentStore;
     private AiSessionActivityTracker? _aiUsageActivityTracker;
@@ -66,6 +67,8 @@ public sealed partial class ShellPage
     private bool _aiUsageUiQueued;
     private bool _aiUsageBackdropInitialized;
     private bool _aiUsageThemeSubscribed;
+    private bool _aiUsageHighContrastSubscribed;
+    private bool _aiUsageHighContrastNotificationsUnavailable;
     private long _aiUsageGeneration;
     private long _aiUsageRequestedVersion;
 
@@ -128,6 +131,7 @@ public sealed partial class ShellPage
     private void UpdateAiUsageFlyoutSize(AppWindow? window)
     {
         double targetHeight = AiUsageFlyoutDefaultHeight;
+        double targetWidth = Math.Min(AiUsageFlyoutWidth, Math.Max(300, (XamlRoot?.Size.Width ?? AiUsageFlyoutWidth + 32) - 32));
         try
         {
             if (window is not null)
@@ -135,7 +139,8 @@ public sealed partial class ShellPage
                 DisplayArea display = DisplayArea.GetFromWindowId(window.Id, DisplayAreaFallback.Primary);
                 double scale = XamlRoot?.RasterizationScale is > 0 ? XamlRoot.RasterizationScale : 1.0;
                 double availableDip = (display.WorkArea.Height / scale) - 96;
-                targetHeight = Math.Clamp(Math.Floor(availableDip), AiUsageFlyoutMinHeight, AiUsageFlyoutDefaultHeight);
+                targetHeight = Math.Clamp(Math.Floor(availableDip), Math.Min(360, availableDip), AiUsageFlyoutDefaultHeight);
+                targetWidth = Math.Min(targetWidth, Math.Max(300, (display.WorkArea.Width / scale) - 32));
             }
         }
         catch (Exception)
@@ -143,11 +148,17 @@ public sealed partial class ShellPage
             targetHeight = AiUsageFlyoutDefaultHeight;
         }
 
-        // Fixed uniform width & height prevent Models (or empty ranges) from shrinking or jumping.
-        AiUsageContent.Width = AiUsageFlyoutWidth;
+        // All tabs share the same bounded viewport; only the body scrolls.
+        AiUsageContent.Width = targetWidth;
         AiUsageContent.Height = targetHeight;
         AiUsageContent.MinHeight = targetHeight;
         AiUsageContent.MaxHeight = targetHeight;
+        bool narrow = targetWidth < 400;
+        Grid.SetColumnSpan(AiUsageHeaderTitle, narrow ? 2 : 1);
+        Grid.SetRow(AiUsageHeaderActions, narrow ? 1 : 0);
+        Grid.SetColumn(AiUsageHeaderActions, narrow ? 0 : 1);
+        Grid.SetColumnSpan(AiUsageHeaderActions, narrow ? 2 : 1);
+        AiUsageHeaderActions.HorizontalAlignment = HorizontalAlignment.Right;
     }
 
     private void SyncAiUsageFlyoutTheme()
@@ -172,7 +183,9 @@ public sealed partial class ShellPage
             }
         }
 
-        AiUsageContent.Background = AiUsageFlyout.SystemBackdrop is null
+        AiUsageContent.Background = _aiUsageAccessibility.HighContrast
+            ? CreateAiUsageSystemBrush(background: true)
+            : AiUsageFlyout.SystemBackdrop is null
             ? ResolveAiUsageBrush("SolidBackgroundFillColorTertiaryBrush", ThemeBrushHelper.SecondaryTextBrush)
             : null;
 
@@ -187,15 +200,20 @@ public sealed partial class ShellPage
 
         Border[] staticCards =
         [
-            AiUsageKpiTokensTile,
-            AiUsageKpiCacheTile,
-            AiUsageKpiTasksTile,
-            AiUsageKpiLatencyTile,
             AiUsageBreakdownCard,
             AiUsageOutcomeCard,
             AiUsageTopModelsCard,
             AiUsageByTaskCard,
         ];
+
+        ApplyAiUsageMetricSurface(AiUsageKpiTokensTile, AiUsageTotalTokensText, AiUsageTokensMetricIcon,
+            0xE7F0FC, 0xB8CEE9, 0x165C9C, 0x1C2D42, 0x3C5976, 0x8CCBFF);
+        ApplyAiUsageMetricSurface(AiUsageKpiCacheTile, AiUsageCacheHitRateText, AiUsageCacheMetricIcon,
+            0xE7F2EC, 0xB8D7C3, 0x17643A, 0x1C3327, 0x3D624E, 0x88D6A1);
+        ApplyAiUsageMetricSurface(AiUsageKpiTasksTile, AiUsageTasksCountValueText, AiUsageTasksMetricIcon,
+            0xEFEAF7, 0xCDBFDE, 0x66458C, 0x30283D, 0x625173, 0xD3B3F0);
+        ApplyAiUsageMetricSurface(AiUsageKpiLatencyTile, AiUsageAvgLatencyText, AiUsageLatencyMetricIcon,
+            0xE4F3F1, 0xAFD5CF, 0x146C64, 0x193431, 0x3B625C, 0x80D9CC);
 
         foreach (Border card in staticCards)
         {
@@ -212,8 +230,24 @@ public sealed partial class ShellPage
         AiUsageNoRecentCallsCard.Background = glassInset;
 
         AiUsageLegacyModelsCard.Background = ResolveAiUsageBrush("BadgeWarningBackgroundBrush", glassInset);
-        AiUsageLegacyModelsCard.BorderBrush = CreateTintedBorderBrush(Color.FromArgb(90, 240, 154, 42));
+        AiUsageLegacyModelsCard.BorderBrush = _aiUsageAccessibility.HighContrast ? glassBorder : CreateTintedBorderBrush(Color.FromArgb(90, 240, 154, 42));
     }
+
+    private void ApplyAiUsageMetricSurface(Border card, TextBlock value, FontIcon icon,
+        uint lightFill, uint lightStroke, uint lightText, uint darkFill, uint darkStroke, uint darkText)
+    {
+        bool light = ActualTheme == ElementTheme.Light;
+        bool highContrast = _aiUsageAccessibility.HighContrast;
+        card.Background = highContrast ? CreateAiUsageSystemBrush(background: true) : UsageColorBrush(light ? lightFill : darkFill);
+        card.BorderBrush = highContrast ? CreateAiUsageSystemBrush(background: false) : UsageColorBrush(light ? lightStroke : darkStroke);
+        value.Foreground = highContrast ? CreateAiUsageSystemBrush(background: false) : UsageColorBrush(light ? lightText : darkText);
+        icon.Foreground = value.Foreground;
+    }
+
+    private static SolidColorBrush UsageColorBrush(uint rgb) => new(Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb));
+
+    private static SolidColorBrush CreateAiUsageSystemBrush(bool background) => new(new Windows.UI.ViewManagement.UISettings().GetColorValue(
+        background ? Windows.UI.ViewManagement.UIColorType.Background : Windows.UI.ViewManagement.UIColorType.Foreground));
 
     private void AiUsageFlyout_Opening(object? sender, object args)
     {
@@ -248,6 +282,20 @@ public sealed partial class ShellPage
             ActualThemeChanged += OnAiUsageActualThemeChanged;
             _aiUsageThemeSubscribed = true;
         }
+        if (!_aiUsageHighContrastSubscribed && !_aiUsageHighContrastNotificationsUnavailable)
+        {
+            try
+            {
+                _aiUsageAccessibility.HighContrastChanged += OnAiUsageHighContrastChanged;
+                _aiUsageHighContrastSubscribed = true;
+            }
+            catch (Exception exception) when (exception is COMException or InvalidOperationException or NotSupportedException)
+            {
+                // Some desktop hosts expose the current setting but no notification
+                // source. Opening, theme synchronization and refresh still read it.
+                _aiUsageHighContrastNotificationsUnavailable = true;
+            }
+        }
 
         RefreshAiUsageText();
         RequestAiUsageRefresh();
@@ -276,8 +324,24 @@ public sealed partial class ShellPage
         RefreshAiUsageText();
     }
 
+    private void OnAiUsageHighContrastChanged(Windows.UI.ViewManagement.AccessibilitySettings sender, object args)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_aiUsageActive && !_disposed)
+            {
+                SyncAiUsageFlyoutTheme();
+                RefreshAiUsageText();
+            }
+        });
+    }
+
     private void OnAiUsageWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
     {
+        if (ReferenceEquals(sender, _aiUsageWindow) && args.DidSizeChange)
+        {
+            UpdateAiUsageFlyoutSize(sender);
+        }
         if (ReferenceEquals(sender, _aiUsageWindow) && !IsAiUsageWindowVisible(sender))
         {
             // A retained Settings window can stay Loaded when hidden for background
@@ -542,6 +606,23 @@ public sealed partial class ShellPage
         {
             ActualThemeChanged -= OnAiUsageActualThemeChanged;
             _aiUsageThemeSubscribed = false;
+        }
+        if (_aiUsageHighContrastSubscribed)
+        {
+            try
+            {
+                _aiUsageAccessibility.HighContrastChanged -= OnAiUsageHighContrastChanged;
+            }
+            catch (Exception exception) when (exception is COMException or InvalidOperationException or NotSupportedException)
+            {
+                // The native notification source can disappear during teardown.
+                // Do not register another handler if its removal cannot be confirmed.
+                _aiUsageHighContrastNotificationsUnavailable = true;
+            }
+            finally
+            {
+                _aiUsageHighContrastSubscribed = false;
+            }
         }
 
         lock (_aiUsageGate)
@@ -1117,6 +1198,17 @@ public sealed partial class ShellPage
         foreach (var item in tabs)
         {
             bool isSelected = item.Tab == _aiUsageTab;
+            if (_aiUsageAccessibility.HighContrast)
+            {
+                item.Button.Background = isSelected ? CreateAiUsageSystemBrush(background: false) : CreateAiUsageSystemBrush(background: true);
+                item.Button.BorderBrush = CreateAiUsageSystemBrush(background: false);
+                item.Icon.Foreground = CreateAiUsageSystemBrush(background: isSelected);
+                item.Text.Foreground = item.Icon.Foreground;
+                item.Text.FontWeight = isSelected ? FontWeights.SemiBold : FontWeights.Normal;
+                item.Indicator.Background = item.Icon.Foreground;
+                item.Indicator.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
+                continue;
+            }
             item.Button.Background = isSelected
                 ? (isLight ? new SolidColorBrush(Color.FromArgb(196, 255, 255, 255)) : new SolidColorBrush(item.DarkTint))
                 : transparent;
@@ -1756,21 +1848,29 @@ public sealed partial class ShellPage
             foreground: ResolveAiUsageBrush(badgePrefix + "ForegroundBrush", ThemeBrushHelper.SecondaryTextBrush)),
     };
 
-    private SolidColorBrush CreateGlassCardBrush() => ActualTheme == ElementTheme.Light
-        ? new SolidColorBrush(Color.FromArgb(148, 255, 255, 255))
-        : new SolidColorBrush(Color.FromArgb(60, 18, 23, 34));
+    private SolidColorBrush CreateGlassCardBrush() => _aiUsageAccessibility.HighContrast
+        ? CreateAiUsageSystemBrush(background: true)
+        : ActualTheme == ElementTheme.Light
+            ? new SolidColorBrush(Color.FromArgb(200, 255, 255, 255))
+            : new SolidColorBrush(Color.FromArgb(96, 18, 23, 34));
 
-    private SolidColorBrush CreateGlassInsetBrush() => ActualTheme == ElementTheme.Light
-        ? new SolidColorBrush(Color.FromArgb(20, 15, 23, 42))
-        : new SolidColorBrush(Color.FromArgb(18, 255, 255, 255));
+    private SolidColorBrush CreateGlassInsetBrush() => _aiUsageAccessibility.HighContrast
+        ? CreateAiUsageSystemBrush(background: true)
+        : ActualTheme == ElementTheme.Light
+            ? new SolidColorBrush(Color.FromArgb(20, 15, 23, 42))
+            : new SolidColorBrush(Color.FromArgb(18, 255, 255, 255));
 
-    private SolidColorBrush CreateGlassTabTrackBrush() => ActualTheme == ElementTheme.Light
-        ? new SolidColorBrush(Color.FromArgb(18, 15, 23, 42))
-        : new SolidColorBrush(Color.FromArgb(44, 10, 14, 22));
+    private SolidColorBrush CreateGlassTabTrackBrush() => _aiUsageAccessibility.HighContrast
+        ? CreateAiUsageSystemBrush(background: true)
+        : ActualTheme == ElementTheme.Light
+            ? new SolidColorBrush(Color.FromArgb(18, 15, 23, 42))
+            : new SolidColorBrush(Color.FromArgb(44, 10, 14, 22));
 
-    private SolidColorBrush CreateGlassBorderBrush() => ActualTheme == ElementTheme.Light
-        ? new SolidColorBrush(Color.FromArgb(20, 15, 23, 42))
-        : new SolidColorBrush(Color.FromArgb(26, 255, 255, 255));
+    private SolidColorBrush CreateGlassBorderBrush() => _aiUsageAccessibility.HighContrast
+        ? CreateAiUsageSystemBrush(background: false)
+        : ActualTheme == ElementTheme.Light
+            ? new SolidColorBrush(Color.FromArgb(40, 15, 23, 42))
+            : new SolidColorBrush(Color.FromArgb(45, 255, 255, 255));
 
     private static SolidColorBrush CreateTintedBorderBrush(Color color) => new(color);
 

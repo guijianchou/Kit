@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Typography', 'Plugins')]
+    [ValidateSet('Typography', 'Plugins', 'AiUsage')]
     [string]$Suite = 'Typography',
     [ValidateSet('AIHub', 'Awake', 'LightSwitch', 'Localserver', 'NetMap', 'UDPtest', 'Winget')]
     [string[]]$PluginFilter = @(),
@@ -26,7 +26,7 @@ $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
 $runName = '{0}-{1}' -f [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'), [guid]::NewGuid().ToString('N')
 $familyName = if ($FontFamily -eq 'system') { 'system' } else { 'noto-sans-sc' }
 $languageName = if ([string]::IsNullOrEmpty($Language)) { 'system-default' } else { $Language }
-$reportCategory = if ($Suite -eq 'Plugins') { 'Plugins' } else { 'Typography' }
+$reportCategory = if ($Suite -eq 'Plugins') { 'Plugins' } elseif ($Suite -eq 'AiUsage') { 'AiUsage' } else { 'Typography' }
 $reportRoot = Join-Path $repoRoot "TestResults\$reportCategory\$Configuration\$languageName\$familyName-$FontSize\$runName"
 Write-Host "Typography smoke report: $reportRoot"
 $testName = 'TypographySmoke'

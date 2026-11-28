@@ -100,7 +100,9 @@ public sealed partial class AIHubPageViewModel
         ? "AIHub_AuditOverviewWindow".FormatLocalized("{0:g} – {1:g} · local time", start.ToLocalTime(), end.ToLocalTime())
         : "AIHub_AuditOverviewUnknownRange".GetLocalizedOrFallback("This snapshot has no recorded scan range. Run a full scan to create a period overview.");
 
-    public string AuditOverviewScore => "AIHub_AuditOverviewScore".FormatLocalized("Health score {0}/100", _auditOverview.HealthScore);
+    public string AuditOverviewScore => HasAuditData
+        ? "AIHub_AuditOverviewScore".FormatLocalized("Health score {0}/100", _auditOverview.HealthScore)
+        : PreferChinese() ? "所选时段尚无可核验评分" : "No verified score for this period";
 
     public int AuditOverviewHighCount => _auditOverview.High;
 
@@ -135,6 +137,14 @@ public sealed partial class AIHubPageViewModel
         get
         {
             var parts = new List<string>();
+            if (HasAuditRangeCoverage)
+            {
+                parts.Add(AuditRangeCoverageText);
+            }
+            else if (_auditOverviewSnapshot?.EvidenceIncomplete == true)
+            {
+                parts.Add(PreferChinese() ? "当前报告缺少部分时段的证据，无法代表完整扫描范围。" : "Evidence is missing for part of this period; the report does not represent the complete scan window.");
+            }
             if (_auditOverviewSnapshot?.SkippedChannels is { Count: > 0 } skipped)
             {
                 parts.Add("AIHub_AuditOverviewSkipped".FormatLocalized("Unreadable channels: {0}.", string.Join(", ", skipped)));
@@ -157,11 +167,9 @@ public sealed partial class AIHubPageViewModel
 
     public bool HasAuditOverviewCoverage => !string.IsNullOrEmpty(AuditOverviewCoverage);
 
-    public bool HasAuditOverviewScopeChange => _auditOverviewSnapshot != null && IsFullScanSelected
-        && _auditOverview.RangeDays != _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
+    public bool HasAuditOverviewScopeChange => HasAuditRangeCoverage;
 
-    public string AuditOverviewNextScanHint => "AIHub_AuditOverviewNextScan".FormatLocalized(
-        "Next full scan: {0}. This overview will update after that scan finishes.", ScanRangeDescription);
+    public string AuditOverviewNextScanHint => AuditRangeCoverageText;
 
     public string AuditOccurrencesHint => "AIHub_AuditOccurrencesHint".GetLocalizedOrFallback("Occurrences are counted per finding; multiple findings can refer to the same event. Findings filters only change the detail list.");
 
@@ -213,6 +221,7 @@ public sealed partial class AIHubPageViewModel
                 OnPropertyChanged(nameof(IsFullScanSelected));
                 OnPropertyChanged(nameof(SelectedScanLabel));
                 OnPropertyChanged(nameof(SelectedScanRangeText));
+                OnPropertyChanged(nameof(SelectedScanHint));
                 OnPropertyChanged(nameof(HasAuditOverviewScopeChange));
             }
         }
@@ -222,11 +231,23 @@ public sealed partial class AIHubPageViewModel
 
     public string SelectedScanLabel => IsFullScanSelected ? FullScanLabel : FastScanLabel;
 
-    public string SelectedScanRangeText => IsFullScanSelected
-        ? ScanRangeDescription
-        : "AIHub_Window_Today".GetLocalizedOrFallback("Today");
+    public string SelectedScanRangeText => ScanRangeDescription;
 
-    public bool CanConfigureAudit => IsEnabled && !IsAuditing && !_disposed;
+    public string SelectedScanHint
+    {
+        get
+        {
+            string action = IsFullScanSelected
+                ? "AIHub_FullScan_Hint".GetLocalizedOrFallback("Full scan rereads the selected period, then updates the audit with the current AI model.")
+                : "AIHub_QuickRefresh_Hint".GetLocalizedOrFallback("Quick refresh reuses collected events and reads missing intervals and the recent tail.");
+            string window = _auditHistoricalSelection && _auditRangeAnchorUtc is DateTime end
+                ? "AIHub_AuditScan_HistoricalWindowFormat".FormatLocalized("Historical window ends {0:g}. Select Latest to scan up to now.", end.ToLocalTime())
+                : "AIHub_AuditScan_LiveWindow".GetLocalizedOrFallback("The selected period ends at the current time.");
+            return $"{action} {SelectedScanRangeText}. {window}";
+        }
+    }
+
+    public bool CanConfigureAudit => IsEnabled && !IsAuditing && !IsAiAnalyzing && !_disposed;
 
     public ICommand StartSelectedScanCommand => _startSelectedScanCommand ??= new RelayCommand(
         () =>
@@ -268,7 +289,8 @@ public sealed partial class AIHubPageViewModel
             !string.IsNullOrWhiteSpace(FinishedText) && FinishedText.Length >= 5 ? $"{SelectedAuditLabel} {FinishedText[..5]}" : SelectedAuditLabel);
 
     public string OverviewHeadline => !HasAuditData
-        ? "AIHub_Fluent_FirstAudit".GetLocalizedOrFallback("Start with your first security audit")
+        ? HasAuditRangeCoverage ? (PreferChinese() ? "所选时段需要补全扫描" : "Scan this period to complete its evidence")
+            : "AIHub_Fluent_FirstAudit".GetLocalizedOrFallback("Start with your first security audit")
         : HighCount > 0
             ? HighCount == 1
                 ? "AIHub_AuditPrioritySingle".GetLocalizedOrFallback("1 issue needs priority attention")
@@ -312,6 +334,12 @@ public sealed partial class AIHubPageViewModel
     {
         get
         {
+            if (IsAiAnalyzing && HasAiReport)
+            {
+                return (PreferChinese() ? "新报告生成中，以下为上次完整结论。" : "A new report is being generated. The previous complete assessment follows.")
+                    + Environment.NewLine + AiReportSummaryText;
+            }
+
             if (HasAiReport)
             {
                 return AiReportSummaryText;
@@ -569,6 +597,7 @@ public sealed partial class AIHubPageViewModel
                 OnPropertyChanged(nameof(AiSummaryFooterMetaText));
                 OnPropertyChanged(nameof(HasAiSummaryFooterMeta));
                 RefreshAiSummary();
+                RefreshAuditActions();
                 break;
             case nameof(HasAiReport):
                 RebuildRelatedEvidence();

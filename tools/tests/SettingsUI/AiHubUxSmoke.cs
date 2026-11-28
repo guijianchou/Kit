@@ -9,7 +9,10 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.AiHub.Contract;
+using Kit.AiHub.Models;
 using Kit.AIHubLib.Models;
+using Kit.AIHubLib.Services;
 using Kit.AIHubLib.Storage;
 using Kit.Settings.UI;
 using Kit.Settings.UI.Controls;
@@ -40,7 +43,7 @@ internal static class AiHubUxSmoke
     [STAThread]
     private static void Main()
     {
-        File.WriteAllText(Report, "Real WinUI; synthetic in-memory audit/candidate/inventory/history data. No scans, AI requests, confirmed file operations, policy saves or clipboard writes.\n");
+        File.WriteAllText(Report, "Real WinUI; synthetic in-memory audit/candidate/inventory/history data and injected scan/model delegates. No real Windows log collection, AI requests, confirmed file operations, policy saves or clipboard writes.\n");
         try
         {
             Require(!new Kit.AiHub.Storage.AiHubSettingsStore().Load().IsEnabled, "Wrapper must disable the shared AI service before startup.");
@@ -94,6 +97,8 @@ internal static class AiHubUxSmoke
         await Navigate(typeof(AIHubPage));
         var page = (AIHubPage)NavigationService.Frame.Content;
         var vm = page.ViewModel;
+        SetAuditEvidenceSession(vm,
+            new AuditEvidenceSession((_, _, _, _, _) => Task.FromResult(new AuditEvidenceBatch([], [], []))));
         await vm.AiHub.Initialization;
         await WaitUntil(() => !Field<bool>(vm, "_loadingOptimizationHistory"));
         Require(!vm.IsEnabled && !vm.AiHub.IsEnabled, "AI Hub and shared service must start disabled.");
@@ -106,7 +111,8 @@ internal static class AiHubUxSmoke
         await CheckPoliciesRequestedDuringBusyOperation();
 
         // This changes only the stopped in-memory repository. Never toggle the page's
-        // persisted module switch, and never invoke a scan or accept an operation dialog.
+        // persisted module switch or accept an operation dialog. Scan coverage below
+        // uses injected in-memory collectors and model delegates only.
         general.SettingsConfig.Enabled.AiHub = true;
         vm.RefreshEnabledState();
         Require(vm.IsEnabled && !vm.AiHub.IsEnabled, "Synthetic selection needs only the local module gate.");
@@ -115,6 +121,8 @@ internal static class AiHubUxSmoke
         await CheckWeeklyReport(page);
         await CheckWorkflowTimers(page);
         await CheckAuditAnalysisLifecycle(page);
+        await CheckAuditReadinessOrdering(page);
+        await CheckSystemDiagnosis(page);
         vm.SelectedScanModeIndex = 0;
         await CheckScanButtonBoundState(page, "fast-scan-selected");
         vm.SelectedScanModeIndex = 1;
@@ -134,10 +142,12 @@ internal static class AiHubUxSmoke
         await CheckAuditSnapshotIsolation(page);
         await CheckAuditFailureLayout(page);
         await CheckPeriodOverview(page);
+        await CheckFullScanAnalysis(page);
         await CheckReadableOverview(page);
         await CheckAuditWorkspace(page);
         await CheckFluentOverviewAndDetails(page);
         await CheckAuditSemanticStates(page);
+        await CheckAiFinalAssessment(page);
         await CheckSplitButtonPalette(page);
         AddHistoryFixture(vm);
         await CheckScrollAndLayouts(page);
@@ -146,6 +156,128 @@ internal static class AiHubUxSmoke
         Log("Shell module palettes, native interaction states, Light/Dark/Light restoration, contrast, keyboard focus and responsive pane renders PASS");
         EnsureNoWorker();
         Require(!vm.IsOptimizing && !vm.IsInventoryScanning && !vm.IsAuditing && !vm.IsAiAnalyzing, "The smoke must finish with no work running.");
+    }
+
+    private static async Task CheckSystemDiagnosis(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var general = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default);
+        bool previousEnabled = general.SettingsConfig.Enabled.AiHub;
+        int previousTab = vm.ActiveTabIndex;
+        var resultField = typeof(AIHubPageViewModel).GetField("_systemDiagnosis", PrivateInstance);
+        var previousResult = resultField.GetValue(vm);
+        bool chinese = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh";
+        var snapshot = new OptimizationEvidenceSnapshot
+        {
+            CollectedUtc = DateTimeOffset.UtcNow,
+            CollectionElapsedMilliseconds = 750,
+            Evidence = new()
+            {
+                new() { Id = "item-000001", Domain = "performance", Coverage = "sampled", Observation = "Synthetic CPU sample: 12 percent for 750 ms. No sustained-load baseline." },
+                new() { Id = "item-000002", Domain = "startup", Coverage = "unavailable", Observation = "Synthetic startup evidence unavailable." },
+            },
+            LocalLabels = new(StringComparer.Ordinal) { ["item-000001"] = "Synthetic process / 测试进程" },
+        };
+        var report = new OptimizationDiagnosticReport
+        {
+            Summary = chinese ? "这是一次只读诊断，短时样本尚不能证明持续负载。" : "This advisory diagnosis does not establish sustained load from a brief sample.",
+            Findings = new()
+            {
+                new()
+                {
+                    Title = chinese ? "继续观察负载" : "Observe resource use",
+                    Priority = "monitor",
+                    Diagnosis = chinese ? "本次只有一个短时样本。" : "Only one brief sample is available.",
+                    Recommendation = chinese ? "重现卡顿时查看任务管理器。" : "Observe Task Manager while reproducing the slowdown.",
+                    ExpectedBenefit = chinese ? "确认是否存在持续资源压力。" : "Establish whether resource pressure persists.",
+                    Tradeoff = chinese ? "观察需要时间；尚未改动任何设置。" : "Observation takes time; no settings have been changed.",
+                    Verification = chinese ? "在相同工作负载下比较多次采样。" : "Compare repeated samples under the same workload.",
+                    EvidenceIds = new() { "item-000001" },
+                },
+            },
+            Limitations = new() { chinese ? "启动项不可用，不能据此判断其状态正常。" : "Startup evidence is unavailable; its health cannot be inferred." },
+        };
+        var success = new OptimizationDiagnosticResult(snapshot, report, Kit.AiHub.Contract.AiErrorCode.None, 900);
+        var failure = new OptimizationDiagnosticResult(snapshot, null, Kit.AiHub.Contract.AiErrorCode.Timeout, 90000);
+        TempFileInfo[] candidates = vm.OptimizationCandidates.ToArray();
+        int selected = vm.SelectedCandidatesCount;
+
+        void Present(OptimizationDiagnosticResult result)
+        {
+            resultField.SetValue(vm, result);
+            Invoke(vm, "OnPropertyChanged", nameof(vm.HasSystemDiagnosis));
+            Invoke(vm, "OnPropertyChanged", nameof(vm.SystemDiagnosisText));
+        }
+
+        void RequireNoFileActions()
+        {
+            Require(vm.OptimizationCandidates.SequenceEqual(candidates) && vm.SelectedCandidatesCount == selected &&
+                !vm.CanExecuteOptimization && !vm.CanCleanAll && !vm.IsOptimizing && !vm.IsInventoryScanning,
+                "Displaying a read-only diagnosis must not create, select, enable or execute file operations.");
+        }
+
+        try
+        {
+            Require(candidates.Length == 0 && selected == 0, "Diagnosis UI fixtures must run before synthetic cleanup candidates are inserted.");
+            vm.ActiveTabIndex = 1;
+            await NextRendering();
+            var card = (FrameworkElement)page.FindName("OptimizationDiagnosisCard");
+            Require(card != null && card.Visibility == Visibility.Visible && card.ActualWidth > 0,
+                "The system diagnosis card must be rendered in Optimization.");
+            var analyze = Descendants(card).OfType<Button>().Single(button => AutomationProperties.GetAutomationId(button) == "AIHub_DiagnoseSystemButton");
+            var copy = Descendants(card).OfType<Button>().Single(button => Equals(button.Content, vm.CopyReportLabel));
+            var output = Descendants(card).OfType<ScrollViewer>().Single();
+            var body = (TextBlock)output.Content;
+            Require(Equals(analyze.Content, chinese ? "分析系统" : "Analyze system") &&
+                Descendants(card).OfType<TextBlock>().Any(text => text.Text == (chinese ? "系统诊断" : "System diagnosis")),
+                "Diagnosis title and action must render in the selected English or Chinese UI language.");
+
+            Present(null);
+            await NextRendering();
+            Require(!vm.HasSystemDiagnosis && output.Visibility == Visibility.Collapsed && copy.Visibility == Visibility.Collapsed,
+                "An empty diagnosis must not expose report or copy controls.");
+            Require(vm.DiagnoseSystemCommand.CanExecute(null) && analyze.IsEnabled,
+                "The enabled local module may collect evidence even while the shared AI service is disabled.");
+            RequireNoFileActions();
+
+            Present(success);
+            await NextRendering();
+            Require(vm.HasSystemDiagnosis && output.Visibility == Visibility.Visible && copy.Visibility == Visibility.Visible && copy.IsEnabled && body.IsTextSelectionEnabled,
+                "A completed diagnosis must display selectable report text and a copy entry.");
+            Require(body.Text.Contains(report.Summary, StringComparison.Ordinal) && body.Text.Contains(report.Findings[0].Recommendation, StringComparison.Ordinal) &&
+                body.Text.Contains(report.Findings[0].Tradeoff, StringComparison.Ordinal) && body.Text.Contains(report.Findings[0].Verification, StringComparison.Ordinal) &&
+                body.Text.Contains("Synthetic process / 测试进程", StringComparison.Ordinal) && body.Text.Contains("unavailable", StringComparison.Ordinal) &&
+                body.Text.Contains(chinese ? "只读建议" : "Advisory only", StringComparison.Ordinal),
+                "The rendered diagnosis must include actions to consider, tradeoffs, verification, local evidence names and unavailable coverage without execution authority.");
+            RequireNoFileActions();
+            await Capture(page, "aihub-system-diagnosis-success.png");
+
+            Present(failure);
+            await NextRendering();
+            Require(body.Text.Contains("Timeout", StringComparison.Ordinal) && body.Text.Contains("Synthetic CPU sample", StringComparison.Ordinal) &&
+                !body.Text.Contains(report.Summary, StringComparison.Ordinal) && output.Visibility == Visibility.Visible && copy.Visibility == Visibility.Visible,
+                "A failed first diagnosis must retain copyable evidence and show failure without fabricating a successful AI report.");
+            RequireNoFileActions();
+
+            general.SettingsConfig.Enabled.AiHub = false;
+            vm.RefreshEnabledState();
+            await NextRendering();
+            Require(!vm.CanDiagnoseSystem && !vm.DiagnoseSystemCommand.CanExecute(null) && !analyze.IsEnabled,
+                "Disabling the module must disable the diagnosis command and its rendered button.");
+            RequireNoFileActions();
+            EnsureNoWorker();
+        }
+        finally
+        {
+            general.SettingsConfig.Enabled.AiHub = previousEnabled;
+            vm.RefreshEnabledState();
+            resultField.SetValue(vm, previousResult);
+            Invoke(vm, "OnPropertyChanged", nameof(vm.HasSystemDiagnosis));
+            Invoke(vm, "OnPropertyChanged", nameof(vm.SystemDiagnosisText));
+            vm.ActiveTabIndex = previousTab;
+            await NextRendering();
+        }
+        Log("System diagnosis empty/success/failure rendering, localized advisory report, copy readiness, disabled-module gate and no executable actions PASS; no scan or AI call invoked");
     }
 
     private static async Task CheckWeeklyReport(AIHubPage page)
@@ -170,7 +302,8 @@ internal static class AiHubUxSmoke
             ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
             await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog")?.IsLoaded == true);
             var dialog = Field<ContentDialog>(page, "_activeDialog");
-            var body = (TextBlock)((ScrollViewer)dialog.Content).Content;
+            var reportContent = (StackPanel)((ScrollViewer)dialog.Content).Content;
+            var body = (TextBlock)reportContent.Children[0];
             await WaitUntil(() => body.Text.Contains(expected, StringComparison.Ordinal));
             Require(Equals(dialog.Title, title) && dialog.PrimaryButtonText == vm.CopyReportLabel && dialog.IsPrimaryButtonEnabled == canCopy && body.IsTextSelectionEnabled,
                 "Copy readiness and the localized dialog must follow the loaded report.");
@@ -194,7 +327,7 @@ internal static class AiHubUxSmoke
             await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddMonths(-1).ToUniversalTime(), HealthScore = 60 }, retentionDays: 3650);
             await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddDays(-7).ToUniversalTime(), HealthScore = 55 }, retentionDays: 3650);
             await store.SaveHistoryAsync(new AuditResult { Timestamp = end.ToUniversalTime(), HealthScore = 80 }, retentionDays: 3650);
-            await Inspect(false, "+25", true, "1/7");
+            await Inspect(false, chinese ? "未比较分数趋势" : "Score trend withheld", true, "1/7");
             int monthDaysObserved = end.AddDays(-7).Month == end.Month ? 2 : 1;
             await Inspect(true, chinese ? "平均健康分" : "Average health score", true, $"{monthDaysObserved}/{end.Day}");
             string monthlyExport = Path.Combine(store.ReportsDirectory, $"monthly-{end:yyyy-MM-dd}.md");
@@ -701,7 +834,7 @@ internal static class AiHubUxSmoke
             auditPhase.SetValue(vm, ScanPhase.Scanning);
             status.SetValue(vm, "Collecting fixture logs");
             await NextRendering();
-            Require(elapsed.Visibility == Visibility.Visible && elapsed.Text.EndsWith("0:00"),
+            Require(elapsed.Visibility == Visibility.Visible && (elapsed.Text == "< 1 s" || elapsed.Text == "不足 1 秒"),
                 "A scan must show its timer immediately, before any collection or AI progress.");
             string first = elapsed.Text;
             await WaitUntil(() => elapsed.Text != first);
@@ -770,11 +903,11 @@ internal static class AiHubUxSmoke
             Require(pinned.Visibility == Visibility.Collapsed, "Finished tasks must release the fixed reading space.");
 
             auditPhase.SetValue(vm, ScanPhase.Scanning);
-            Require(vm.AuditElapsedText.EndsWith("0:00"), "A new audit must reset elapsed time.");
+            Require(vm.AuditElapsedText is "< 1 s" or "不足 1 秒", "A new audit must reset elapsed time.");
             auditPhase.SetValue(vm, ScanPhase.Failed);
             status.SetValue(vm, "Cancelled fixture scan");
             await Task.Delay(1100);
-            Require(vm.AuditElapsedText.EndsWith("0:00") && vm.AuditStatusText == "Cancelled fixture scan",
+            Require((vm.AuditElapsedText is "< 1 s" or "不足 1 秒") && vm.AuditStatusText == "Cancelled fixture scan",
                 "A stopped scan must not be refreshed by a late timer tick.");
             Log("Scan timers: immediate display, silent local/AI progress, independent clocks, completion, cancellation and restart PASS");
         }
@@ -814,8 +947,13 @@ internal static class AiHubUxSmoke
         };
         var aiIssues = new[]
         {
-            new AuditIssue { Title = "Validated AI fixture finding", EventId = "2", LogName = "System", Severity = "Low", Description = "Synthetic validated evidence" },
+            new AuditIssue { Title = "Validated AI fixture finding", EventId = "2", LogName = "System", Severity = "Low", Description = "Synthetic validated evidence", EventRef = "item-000002", RelatedEventRefs = ["item-000002"] },
         };
+        SecurityEvent[] reviewedEvents =
+        [
+            new(1, "System", "Synthetic", 2, DateTime.UtcNow, "First fixture event"),
+            new(2, "System", "Synthetic", 2, DateTime.UtcNow.AddMinutes(-1), "Second fixture event"),
+        ];
         try
         {
             vm.ActiveTabIndex = 0;
@@ -853,7 +991,7 @@ internal static class AiHubUxSmoke
                     outcome + ": active AI progress must advance elapsed time without changing the banner to completed.");
 
                 var retained = new AiHubAuditAnalysisService.AuditAnalysisResult(aiIssues, true, "fixture partial");
-                Invoke(vm, "ApplyAiAnalysis", retained, ruleIssues, Array.Empty<SecurityEvent>(), null, true);
+                Invoke(vm, "ApplyAiAnalysis", retained, ruleIssues, reviewedEvents, null, true);
                 await NextRendering();
                 var inlineResult = (TextBlock)page.FindName("AuditPinnedAiResult");
                 Require(vm.HasAiReport && !vm.IsAiSummaryCompleted && vm.AuditPhase == ScanPhase.Scanning && vm.StatusSeverity != InfoBarSeverity.Success,
@@ -872,8 +1010,11 @@ internal static class AiHubUxSmoke
                 else
                 {
                     var result = new AiHubAuditAnalysisService.AuditAnalysisResult(
-                        outcome == "failed" ? null : aiIssues, outcome == "partial", outcome == "ok" ? null : "fixture incomplete");
-                    Invoke(vm, "ApplyAiAnalysis", result, ruleIssues, Array.Empty<SecurityEvent>(), null, false);
+                        outcome == "failed" ? null : aiIssues, outcome == "partial", outcome == "ok" ? null : "fixture incomplete")
+                    {
+                        UsedModel = "test-model", UsedRoute = "Main", MatchesRequestedModel = true,
+                    };
+                    Invoke(vm, "ApplyAiAnalysis", result, ruleIssues, reviewedEvents, null, false);
                     analyzing.SetValue(vm, false);
                 }
                 await NextRendering();
@@ -939,31 +1080,39 @@ internal static class AiHubUxSmoke
         var activity = (TextBlock)page.FindName("AuditPinnedTaskStatus");
         var queue = (TextBlock)page.FindName("AuditPinnedQueueStatus");
         var elapsed = (TextBlock)page.FindName("AuditPinnedElapsed");
-        // AuditElapsedText reads a live Stopwatch, while the UI receives its
-        // notification on the one-second dispatcher tick. A rendering event can
-        // occur between those two; wait for the bound text, not just the getter.
+        // Compare the rendered time with the value announced by an actual timer
+        // notification. Reading the live Stopwatch after rendering can cross the
+        // next second before its dispatcher tick and repeatedly miss that window.
         var bindingWait = Stopwatch.StartNew();
-        string expectedElapsed;
-        while (true)
+        string expectedElapsed = null;
+        void OnElapsedChanged(object sender, PropertyChangedEventArgs args)
         {
-            await NextRendering();
-            expectedElapsed = vm.AuditElapsedText;
-            if (elapsed.Text == expectedElapsed && summary.Text == vm.AuditProgressSummaryText &&
-                activity.Text == vm.AuditProgressActivityText && queue.Text == vm.AuditProgressQueueText)
-            {
-                page.UpdateLayout();
-                break;
-            }
-            if (bindingWait.Elapsed > TimeSpan.FromSeconds(3))
-            {
-                throw new TimeoutException($"{context}: audit progress bindings did not catch up; " +
-                    $"elapsed='{elapsed.Text}'/'{expectedElapsed}', " +
-                    $"summary='{summary.Text}'/'{vm.AuditProgressSummaryText}', " +
-                    $"activity='{activity.Text}'/'{vm.AuditProgressActivityText}', " +
-                    $"queue='{queue.Text}'/'{vm.AuditProgressQueueText}'.");
-            }
-            await Task.Delay(25);
+            if (args.PropertyName == nameof(vm.AuditElapsedText)) expectedElapsed = vm.AuditElapsedText;
         }
+        vm.PropertyChanged += OnElapsedChanged;
+        try
+        {
+            while (true)
+            {
+                await NextRendering();
+                if (expectedElapsed is not null && elapsed.Text == expectedElapsed && summary.Text == vm.AuditProgressSummaryText &&
+                    activity.Text == vm.AuditProgressActivityText && queue.Text == vm.AuditProgressQueueText)
+                {
+                    page.UpdateLayout();
+                    break;
+                }
+                if (bindingWait.Elapsed > TimeSpan.FromSeconds(3))
+                {
+                    throw new TimeoutException($"{context}: audit progress bindings did not catch up; " +
+                        $"elapsed='{elapsed.Text}'/'{expectedElapsed}', " +
+                        $"summary='{summary.Text}'/'{vm.AuditProgressSummaryText}', " +
+                        $"activity='{activity.Text}'/'{vm.AuditProgressActivityText}', " +
+                        $"queue='{queue.Text}'/'{vm.AuditProgressQueueText}'.");
+                }
+                await Task.Delay(25);
+            }
+        }
+        finally { vm.PropertyChanged -= OnElapsedChanged; }
         Require(vm.HasAuditBatchProgress && summary.Visibility == Visibility.Visible && summary.Text == vm.AuditProgressSummaryText &&
             summary.Text.Contains(expectedCounts, StringComparison.Ordinal) && activity.Text == vm.AuditProgressActivityText &&
             (activity.Text.StartsWith("Latest update:", StringComparison.Ordinal) || activity.Text.StartsWith("最新进展：", StringComparison.Ordinal)) &&
@@ -1134,12 +1283,89 @@ internal static class AiHubUxSmoke
         Log("Long native 401 failures keep bounded full-width partial/failed workflow details and retained local results in light/dark wide/narrow layouts PASS");
     }
 
+    private static async Task CheckAuditReadinessOrdering(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var originalReadiness = vm.AiReadinessLevel;
+        string originalText = vm.AiReadinessText;
+        string originalModel = vm.CurrentEngineAndModelLabel;
+        string originalScope = Field<string>(vm, "_knownAuditAnalysisScope");
+        var oldReadiness = new AiReadiness(AiReadinessLevel.Unverified, "codex", "old-model");
+        var astraReadiness = new AiReadiness(AiReadinessLevel.Unverified, "codex", "astra");
+        Task Refresh(Func<Task<AiReadiness>> read, Func<Task<string>> scope) =>
+            (Task)Invoke(vm, "RefreshAiReadinessSnapshotAsync", read, scope);
+        AuditResult Report(string scope)
+        {
+            var snapshot = FluentAuditFixture();
+            snapshot.AnalysisOutcome = "ok";
+            snapshot.AiAnalysisScope = scope;
+            snapshot.AiReportSummary = "Complete synthetic report for " + scope;
+            return snapshot;
+        }
+        try
+        {
+            Invoke(vm, "ApplyHistoricalAudit", Report("old-scope"));
+            var delayedReadiness = new TaskCompletionSource<AiReadiness>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var oldRead = Refresh(() => delayedReadiness.Task, () => Task.FromResult("old-scope"));
+            await Refresh(() => Task.FromResult(astraReadiness), () => Task.FromResult("astra-scope"));
+            delayedReadiness.SetResult(oldReadiness);
+            await oldRead;
+            Require(vm.AiReadinessText.Contains("astra", StringComparison.Ordinal)
+                && Field<string>(vm, "_knownAuditAnalysisScope") == "astra-scope" && Field<bool>(vm, "_auditReportNeedsRefresh"),
+                "A late old-model readiness read must not overwrite the newer model or its Update-report action.");
+
+            var delayedScope = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var oldScope = Refresh(() => Task.FromResult(oldReadiness), () => delayedScope.Task);
+            await Refresh(() => Task.FromResult(astraReadiness), () => Task.FromResult("astra-scope"));
+            delayedScope.SetResult("old-scope");
+            await oldScope;
+            Require(Field<string>(vm, "_knownAuditAnalysisScope") == "astra-scope" && Field<bool>(vm, "_auditReportNeedsRefresh"),
+                "A late scope response must not clear Update after a model change.");
+
+            int scopeReads = 0;
+            var replacedScope = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var replaced = Refresh(() => Task.FromResult(astraReadiness), () => ++scopeReads == 1 ? replacedScope.Task : Task.FromResult("astra-scope"));
+            var newReport = Report("astra-scope");
+            Invoke(vm, "ApplyHistoricalAudit", newReport);
+            replacedScope.SetResult("old-scope");
+            await replaced;
+            Require(scopeReads == 2 && ReferenceEquals(newReport, Field<AuditResult>(vm, "_auditOverviewSnapshot"))
+                && !Field<bool>(vm, "_auditReportNeedsRefresh"),
+                "A changed report must trigger a new scope read instead of applying the previous report's delayed result.");
+
+            int busyReads = 0;
+            var duringAnalysis = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var busy = Refresh(() => Task.FromResult(astraReadiness), () => ++busyReads == 1 ? duringAnalysis.Task : Task.FromResult("astra-new-policy"));
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, true);
+            duringAnalysis.SetResult("obsolete-during-analysis");
+            await busy;
+            Require(busyReads == 1 && Field<string>(vm, "_knownAuditAnalysisScope") == "astra-scope",
+                "Readiness must not change report identity while its AI analysis is running.");
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
+            await WaitUntil(() => busyReads == 2);
+            Require(Field<string>(vm, "_knownAuditAnalysisScope") == "astra-new-policy" && Field<bool>(vm, "_auditReportNeedsRefresh"),
+                "Finishing analysis must re-read current configuration and restore the correct Update-report action.");
+        }
+        finally
+        {
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiReadinessLevel)).SetValue(vm, originalReadiness);
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiReadinessText)).SetValue(vm, originalText);
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.CurrentEngineAndModelLabel)).SetValue(vm, originalModel);
+            typeof(AIHubPageViewModel).GetField("_knownAuditAnalysisScope", PrivateInstance).SetValue(vm, originalScope);
+            Invoke(vm, "ClearAuditSnapshot");
+        }
+        EnsureNoWorker();
+        Log("Readiness and report identity keep newest model results, recheck replaced snapshots and defer scope publication during analysis PASS");
+    }
+
     private static AuditResult FluentAuditFixture()
     {
         var timestamp = new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Utc);
         return new AuditResult
         {
             Timestamp = timestamp, ScanStart = timestamp.AddDays(-2), ScanEnd = timestamp,
+            CollectionProfile = AuditCollectionProfile.ForMode(EventLogService.AuditMode.Extended),
             HealthScore = 76, EventsScanned = 238,
             Findings = Enumerable.Range(0, 6).Select(index => new AuditIssueEnhanced
             {
@@ -1162,59 +1388,428 @@ internal static class AiHubUxSmoke
         vm.ActiveTabIndex = 0;
         vm.AuditResultViewIndex = 0;
         vm.ResetFindingFilters();
-        int originalRange = vm.FullScanRangeIndex;
-        int originalMode = vm.SelectedScanModeIndex;
-        var lifetime = Field<CancellationTokenSource>(vm, "_auditCts");
-        vm.SelectedScanModeIndex = 1;
-        foreach (var range in new[] { (Days: 2, Label: "2D", Index: 0), (Days: 7, Label: "1W", Index: 1), (Days: 30, Label: "1M", Index: 2) })
+        var fixture = FluentAuditFixture();
+        fixture.CollectionProfile = AuditCollectionProfile.ForMode(EventLogService.AuditMode.Extended);
+        var end = fixture.ScanEnd.Value;
+        var events = new List<SecurityEvent>
         {
-            var fixture = FluentAuditFixture();
-            fixture.ScanStart = fixture.ScanEnd.Value.AddDays(-range.Days);
-            fixture.SkippedChannels = new List<string>();
-            fixture.LimitedChannels = new List<string>();
-            fixture.AnalysisOutcome = "ok";
-            vm.FullScanRangeIndex = range.Index;
-            Invoke(vm, "ApplyHistoricalAudit", fixture);
-            await NextRendering();
-            var overview = (Border)page.FindName("AuditPeriodOverview");
-            Require(vm.AuditOverviewRange == range.Label && ((TextBlock)page.FindName("AuditPeriodHeading")).Text == vm.AuditSummaryHeading && vm.AuditSummaryHeading.Contains(range.Label),
-                "Overview heading must identify the completed scan's 2D/1W/1M range.");
-            Require(vm.AuditOverviewWindow.Contains(fixture.ScanStart.Value.ToLocalTime().ToString("g")) && vm.AuditOverviewDescription.Contains("238") && vm.AuditOverviewScore.Contains("76/100"),
-                "The period, event count and score must come from the same completed snapshot.");
-            Require(!vm.HasAuditOverviewScopeChange && !vm.HasAuditOverviewCoverage, "A matching scan range without collection limitations must have no mismatch or coverage notice.");
-            string window = vm.AuditOverviewWindow;
-            string counts = vm.AuditTotals;
-            vm.FullScanRangeIndex = (range.Index + 1) % 3;
-            vm.FindingSearchText = "no matching issue";
-            await NextRendering();
-            Require(vm.HasAuditOverviewScopeChange && vm.AuditOverviewRange == range.Label && vm.AuditOverviewWindow == window && vm.AuditTotals == counts &&
-                ReferenceEquals(lifetime, Field<CancellationTokenSource>(vm, "_auditCts")) && !vm.IsAuditing,
-                "Changing the next scan or filtering details must retain the completed period overview and start no work.");
-            vm.ResetFindingFilters();
-            vm.FullScanRangeIndex = range.Index;
-            App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
-            overview.StartBringIntoView();
-            await NextRendering();
-            await Capture(page, "aihub-period-overview-" + range.Label + ".png");
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-1), "Recent interruption"),
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-5), "Earlier interruption"),
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-20), "Older interruption"),
+        };
+        var calls = new List<AuditEvidenceWindow>();
+        var session = new AuditEvidenceSession((window, _, _, _, _) =>
+        {
+            calls.Add(window);
+            return Task.FromResult(new AuditEvidenceBatch(events, [], []));
+        });
+        SetAuditEvidenceSession(vm, session);
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
+        Invoke(vm, "StartAuditRangeLoad", true, true);
+        await WaitUntil(() => !vm.IsAuditing);
+        Require(vm.AllIssues.Sum(item => item.Occurrences) == 1 && calls.Count == 1, "Initial historical load must collect only the selected two days.");
+        typeof(AIHubPageViewModel).GetField("_auditMergedSummary", PrivateInstance).SetValue(vm, "obsolete two-day AI totals");
+        typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiAnalysisRanText)).SetValue(vm, "obsolete two-day AI status");
+        typeof(AIHubPageViewModel).GetProperty(nameof(vm.HealthScoreGrade)).SetValue(vm, "obsolete grade");
+        vm.FullScanRangeIndex = 1;
+        await WaitUntil(() => !vm.IsAuditing);
+        Require(vm.AllIssues.Sum(item => item.Occurrences) == 2 && calls.Count == 2 && calls[1] == new AuditEvidenceWindow(end.AddDays(-7), end.AddDays(-2)),
+            "Selecting seven days must automatically read only the missing older five days.");
+        Require(!vm.AuditResultDetailText.Contains("obsolete", StringComparison.Ordinal) && string.IsNullOrEmpty(vm.AiAnalysisRanText)
+            && vm.HealthScoreGrade != "obsolete grade", "A new period must reset previous AI totals/status and project its own score grade.");
+        vm.FullScanRangeIndex = 2;
+        await WaitUntil(() => !vm.IsAuditing);
+        Require(vm.AllIssues.Sum(item => item.Occurrences) == 3 && calls.Count == 3 && calls[2] == new AuditEvidenceWindow(end.AddDays(-30), end.AddDays(-7)),
+            "Selecting thirty days must automatically extend the shared evidence window.");
+        Require(calls.All(window => window.ToUtc <= end), "Historical navigation must never read current-time events.");
+        foreach (int index in new[] { 0, 1, 2, 0 })
+        {
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiAnalysisRanText)).SetValue(vm, "obsolete cached-view status");
+            vm.FullScanRangeIndex = index;
+            await WaitUntil(() => !vm.IsAuditing);
+            Require(calls.Count == 3, "Returning to a loaded period must not re-read Windows logs.");
+            Require(string.IsNullOrEmpty(vm.AiAnalysisRanText)
+                && ReferenceEquals(Field<AuditResult>(vm, "_auditSourceSnapshot"), Field<AuditResult>(vm, "_auditOverviewSnapshot")),
+                "Cached navigation must replace AI status and keep the source snapshot synchronized.");
+            Require(vm.AuditPhase == ScanPhase.Idle && !vm.SidebarWorkflowVisible && string.IsNullOrEmpty(vm.AuditElapsedText),
+                "Displaying a cached period must not claim a newly completed scan with a duration or 100% workflow.");
         }
+        vm.FullScanRangeIndex = 1;
+        await WaitUntil(() => !vm.IsAuditing);
+        var oldEvent = events[1];
+        events.RemoveAt(1);
+        vm.SelectedScanModeIndex = 1;
+        vm.StartSelectedScanCommand.Execute(null);
+        await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+        Require(calls.Count == 4 && calls[^1] == new AuditEvidenceWindow(end.AddDays(-7), end)
+            && vm.AllIssues.Sum(item => item.Occurrences) == 1 && vm.SidebarWorkflowVisible && vm.AuditElapsedText != "0s",
+            "Manual Full scan must reread the entire selected historical window and replace stale cached evidence.");
+        vm.FullScanRangeIndex = 2;
+        await WaitUntil(() => !vm.IsAuditing);
+        Require(calls.Count == 4 && vm.AllIssues.Sum(item => item.Occurrences) == 2 && !vm.SidebarWorkflowVisible,
+            "A refreshed subrange must invalidate stale broader projections while reusing unaffected older raw evidence.");
+        vm.FullScanRangeIndex = 1;
+        await WaitUntil(() => !vm.IsAuditing);
+        vm.SelectedScanModeIndex = 0;
+        Require(vm.SelectedScanRangeText == vm.ScanRangeDescription
+            && vm.SelectedScanHint.Contains(end.ToLocalTime().ToString("g"), StringComparison.Ordinal),
+            "Quick refresh must show the selected period and the explicit historical cutoff.");
+        vm.StartSelectedScanCommand.Execute(null);
+        await WaitUntil(() => !vm.IsAuditing);
+        Require(calls.Count == 5 && calls[^1] == new AuditEvidenceWindow(end.AddMinutes(-2), end)
+            && vm.AllIssues.Sum(item => item.Occurrences) == 1,
+            "Quick refresh must reread only the historical tail when the selected period is already covered.");
+        events.Insert(1, oldEvent);
+        vm.SelectedScanModeIndex = 1;
+        Require(typeof(AIHubPageViewModel).GetProperty("FullDeepAnalyzeCommand") == null
+            && typeof(AIHubPageViewModel).GetProperty("RefreshAuditRangeCommand") == null,
+            "The removed regenerate and supplemental scan commands must have no remaining UI entry points.");
+        await Capture(page, "aihub-auto-period-reuse.png");
 
-        var limited = FluentAuditFixture();
-        limited.SkippedChannels = new List<string> { "Security" };
-        limited.LimitedChannels = new List<string> { "System" };
-        limited.AnalysisOutcome = "partial";
-        Invoke(vm, "ApplyHistoricalAudit", limited);
-        Require(vm.HasAuditOverviewCoverage && vm.AuditOverviewCoverage.Contains("Security") && vm.AuditOverviewCoverage.Contains("System"),
-            "Stored partial collection and AI results must remain visible after reopening a snapshot.");
-        var legacy = new AuditResult { Findings = limited.Findings };
-        Invoke(vm, "ApplyHistoricalAudit", legacy);
-        Require(vm.AuditOverviewRange != "2D" && vm.AuditOverviewRange != "1W" && vm.AuditOverviewRange != "1M" && !string.IsNullOrWhiteSpace(vm.AuditOverviewWindow),
-            "A legacy snapshot with no time bounds cannot inherit the next full scan range.");
-        vm.FullScanRangeIndex = originalRange;
-        vm.SelectedScanModeIndex = originalMode;
+        // A cancelled slow range must not publish over a later cached selection.
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int slowCalls = 0;
+        var slow = new AuditEvidenceSession(async (_, _, _, _, token) =>
+        {
+            if (Interlocked.Increment(ref slowCalls) == 2)
+            {
+                entered.SetResult();
+                await release.Task;
+                token.ThrowIfCancellationRequested();
+            }
+            return new AuditEvidenceBatch(events, [], []);
+        });
+        SetAuditEvidenceSession(vm, slow);
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
+        Invoke(vm, "StartAuditRangeLoad", true, true);
+        await WaitUntil(() => !vm.IsAuditing);
+        vm.FullScanRangeIndex = 2;
+        await entered.Task;
+        vm.FullScanRangeIndex = 0;
+        release.SetResult();
+        await WaitUntil(() => !vm.IsAuditing);
+        await Task.Delay(50);
+        Require(vm.FullScanRangeIndex == 0 && vm.AllIssues.Sum(item => item.Occurrences) == 1,
+            "A late cancelled month load must not overwrite the latest two-day selection.");
+
+        SetAuditEvidenceSession(vm, new AuditEvidenceSession((_, _, _, _, _) =>
+            Task.FromResult(new AuditEvidenceBatch(events, [], [])), maximumEvents: 2));
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
+        Invoke(vm, "StartAuditRangeLoad", true, true);
+        await WaitUntil(() => !vm.IsAuditing);
+        vm.FullScanRangeIndex = 1;
+        await WaitUntil(() => !vm.IsAuditing);
+        vm.FullScanRangeIndex = 2;
+        await WaitUntil(() => !vm.IsAuditing);
+        var incomplete = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+        Require(incomplete.EvidenceIncomplete && incomplete.EventsScanned > 0 && vm.HasAuditOverviewCoverage,
+            "Eviction must retain a structural evidence gap alongside the remaining findings.");
+        var pendingWrites = Field<Task>(vm, "_auditHistoryWriteTask");
+        var completedAnalysis = new AiHubAuditAnalysisService.AuditAnalysisResult(Array.Empty<AuditIssue>(), false, null)
+        {
+            UsedModel = "test-model", UsedRoute = "Main", MatchesRequestedModel = true,
+        };
+        Invoke(vm, "ApplyAiAnalysis", completedAnalysis, vm.AllIssues.ToList(), Field<List<SecurityEvent>>(vm, "_lastAuditEvents"), incomplete, false);
+        typeof(AIHubPageViewModel).GetField("_persistCurrentAudit", PrivateInstance).SetValue(vm, true);
+        Invoke(vm, "PersistCurrentAudit");
+        Require(incomplete.EvidenceIncomplete && incomplete.AnalysisOutcome == "ok" && vm.HasAuditOverviewCoverage
+            && ReferenceEquals(pendingWrites, Field<Task>(vm, "_auditHistoryWriteTask")),
+            "A successful AI response must neither erase missing evidence nor save this incomplete window as a complete historical scan.");
+        SetAuditEvidenceSession(vm,
+            new AuditEvidenceSession((_, _, _, _, _) => Task.FromResult(new AuditEvidenceBatch([], [], []))));
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
         EnsureNoWorker();
-        Log("Completed 2D/1W/1M overview, unchanged next-scan draft, independent filters, persisted coverage and legacy-range fallback PASS");
+        Log("Automatic period reuse, full-window reread, quick incremental refresh, historical bounds, truthful cached display and latest-selection wins PASS");
     }
 
+    private static async Task CheckFullScanAnalysis(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var originalSnapshot = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+        var availableField = typeof(AIHubPageViewModel).GetField("_auditAiAvailable", PrivateInstance);
+        var analyzeField = typeof(AIHubPageViewModel).GetField("_analyzeAuditEvents", PrivateInstance);
+        var originalAvailable = availableField.GetValue(vm);
+        var originalAnalyze = analyzeField.GetValue(vm);
+        string originalScope = Field<string>(vm, "_knownAuditAnalysisScope");
+        var pendingWrites = Field<Task>(vm, "_auditHistoryWriteTask");
+        var end = FluentAuditFixture().ScanEnd.Value;
+        SecurityEvent[] events =
+        {
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-1), "Synthetic recent shutdown"),
+            new(41, "System", "Kernel-Power", 1, end.AddDays(-5), "Synthetic earlier shutdown"),
+        };
+        const string previousSummary = "Previous DeepSeek synthetic complete report";
+        const string currentScope = "synthetic-gpt-6-astra-scope";
+        int modelCalls = 0;
+        int collectionCalls = 0;
+        bool available = true;
+        string resultMode = "complete";
+        IReadOnlyList<SecurityEvent> analyzedEvents = null;
+        long analysisStartElapsed = 0;
+        var collectionEntered = NewSignal();
+        var releaseCollection = NewSignal();
+        var analysisEntered = NewSignal();
+        var releaseAnalysis = NewSignal();
+        bool watchingBusy = false;
+        bool lostBusy = false;
+        PropertyChangedEventHandler busyChanged = (_, args) =>
+        {
+            if (watchingBusy && (args.PropertyName is nameof(vm.IsAuditing) or nameof(vm.IsAiAnalyzing))
+                && !vm.IsAuditing && !vm.IsAiAnalyzing)
+            {
+                lostBusy = true;
+            }
+        };
+        Func<IReadOnlyList<SecurityEvent>, IProgress<AiTaskProgress>, IProgress<AiHubAuditAnalysisService.AuditAnalysisResult>,
+            AuditAnalysisCache, AiHubAuditAnalysisService.AuditAnalysisRetryState, CancellationToken,
+            Task<AiHubAuditAnalysisService.AuditAnalysisResult>> analyze = async (input, progress, partial, _, _, token) =>
+        {
+            Interlocked.Increment(ref modelCalls);
+            analysisStartElapsed = AuditElapsedMilliseconds();
+            analyzedEvents = input.ToArray();
+            string mode = resultMode;
+            var release = releaseAnalysis;
+            var result = new AiHubAuditAnalysisService.AuditAnalysisResult(Array.Empty<AuditIssue>(), false, null)
+            {
+                CompleteEvidenceCoverage = true,
+                UsedModel = "test-model", UsedRoute = "Main", MatchesRequestedModel = true,
+                AnalyzedEvents = input.Count,
+                Scope = currentScope,
+                EvidenceFingerprint = (string)typeof(AiHubAuditAnalysisService)
+                    .GetMethod("CreateEvidenceFingerprint", BindingFlags.Static | BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { input }),
+            };
+            progress.Report(new AiTaskProgress("Execute", "Synthetic model running", 0, 2));
+            partial.Report(result with { CompleteEvidenceCoverage = false, IsPartial = true, ValidatedBatchCount = 1 });
+            analysisEntered.TrySetResult();
+            if (mode == "late") await release.Task;
+            else await release.Task.WaitAsync(token);
+            if (mode == "throw") throw new InvalidOperationException("Synthetic full-scan analysis failure");
+            return mode == "partial"
+                ? result with { CompleteEvidenceCoverage = false, IsPartial = true, Failure = "Synthetic incomplete batch" }
+                : result;
+        };
+        availableField.SetValue(vm, (Func<bool>)(() => available));
+        analyzeField.SetValue(vm, analyze);
+        vm.PropertyChanged += busyChanged;
+        try
+        {
+            Prepare(holdCollection: true);
+            watchingBusy = true;
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => collectionEntered.Task.IsCompleted);
+            var collectionClock = Field<object>(vm, "_auditClock");
+            await Task.Delay(250);
+            long collectedElapsed = AuditElapsedMilliseconds();
+            releaseCollection.SetResult();
+            await WaitUntil(() => analysisEntered.Task.IsCompleted);
+            await NextRendering();
+            var active = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+            Require(collectedElapsed >= 200 && ReferenceEquals(collectionClock, Field<object>(vm, "_auditClock"))
+                && analysisStartElapsed >= collectedElapsed,
+                "Full scan elapsed time must continue from log collection into AI analysis without resetting its clock.");
+            Require(modelCalls == 1 && collectionCalls == 1 && analyzedEvents.Count == 2
+                && active.ScanStart == end.AddDays(-7) && active.ScanEnd == end,
+                "Full scan must automatically send the entire selected historical period to the current model exactly once.");
+            Require(!lostBusy && vm.IsAiAnalyzing && vm.AuditPhase == ScanPhase.Scanning
+                && vm.SidebarWorkflowPercent < 100 && vm.CancelAuditCommand.CanExecute(null)
+                && active.AnalysisOutcome == "pending" && string.IsNullOrEmpty(active.AiAnalysisScope),
+                "Collection-to-AI handoff must remain busy, cancellable and pending instead of claiming a completed old-model audit.");
+            Require(vm.HasAiReport && vm.AiReportSummaryText == previousSummary,
+                "The previous complete report must remain available while replacement analysis and partial batches are pending.");
+            watchingBusy = false;
+            releaseAnalysis.SetResult();
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(active.AnalysisOutcome == "ok" && active.AiAnalysisScope == currentScope && vm.HasAiReport
+                && vm.AiReportSummaryText != previousSummary && vm.AllIssues.Count == 0 && vm.HealthScore == 100
+                && active.Findings.Count == 0 && vm.SidebarWorkflowPercent == 100
+                && active.UsedModel == "test-model" && vm.AiReportMetaText.Contains("test-model · Main", StringComparison.Ordinal),
+                "A complete current-model result must replace the old report, findings, health score and scope before Full scan completes.");
+            await Capture(page, "aihub-full-scan-ai-complete.png");
+
+            vm.SelectedScanModeIndex = 0;
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            vm.FullScanRangeIndex = 0;
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            vm.FullScanRangeIndex = 1;
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(modelCalls == 1, "Quick refresh and period navigation must reuse evidence without automatically invoking AI.");
+
+            foreach (string mode in new[] { "partial", "throw", "cancel" })
+            {
+                Prepare(mode);
+                vm.StartSelectedScanCommand.Execute(null);
+                await WaitUntil(() => analysisEntered.Task.IsCompleted);
+                if (mode == "cancel") vm.CancelAuditCommand.Execute(null);
+                else releaseAnalysis.SetResult();
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                var incomplete = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+                string expected = mode == "throw" ? "failed" : mode == "cancel" ? "cancelled" : "partial";
+                Require(incomplete.AnalysisOutcome == expected && string.IsNullOrEmpty(incomplete.AiAnalysisScope)
+                    && vm.AiReportSummaryText == previousSummary && vm.HasAiReport
+                    && vm.AuditPhase != ScanPhase.Scanning && vm.SidebarWorkflowPercent < 100
+                    && (string)typeof(AIHubPageViewModel).GetProperty("CurrentAuditAnalysisAction", PrivateInstance).GetValue(vm) == "retry",
+                    $"Full scan {mode} must retain the last complete report, mark new evidence incomplete, and offer retry without claiming success.");
+
+                vm.FullScanRangeIndex = 0;
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                vm.FullScanRangeIndex = 1;
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                var revisited = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+                Require(vm.HasAiReport && vm.AiReportSummaryText == previousSummary
+                    && revisited.AnalysisOutcome == expected && string.IsNullOrEmpty(revisited.AiAnalysisScope),
+                    $"Returning to seven days after Full scan {mode} must restore its prior complete report without assigning that report to new evidence.");
+
+                int callsBeforeQuick = modelCalls;
+                vm.FullScanRangeIndex = 0;
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                vm.SelectedScanModeIndex = 0;
+                vm.StartSelectedScanCommand.Execute(null);
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                vm.FullScanRangeIndex = 1;
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                var afterQuickRefresh = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+                Require(modelCalls == callsBeforeQuick && vm.HasAiReport && vm.AiReportSummaryText == previousSummary
+                    && afterQuickRefresh.AnalysisOutcome != "ok" && string.IsNullOrEmpty(afterQuickRefresh.AiAnalysisScope),
+                    $"Refreshing two days after Full scan {mode} must retain the seven-day complete report when period projections are rebuilt.");
+
+                // Retry the existing failed view, without reinstalling the prior report fixture.
+                analysisEntered = NewSignal();
+                releaseAnalysis = NewSignal();
+                vm.SelectedScanModeIndex = 1;
+                vm.StartSelectedScanCommand.Execute(null);
+                await WaitUntil(() => analysisEntered.Task.IsCompleted);
+                var retried = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+                Require(vm.HasAiReport && vm.AiReportSummaryText == previousSummary && vm.IsAiAnalyzing
+                    && retried.AnalysisOutcome == "pending" && string.IsNullOrEmpty(retried.AiAnalysisScope),
+                    $"A repeated Full scan after {mode} must keep the prior complete report available during analysis.");
+                if (mode == "cancel") vm.CancelAuditCommand.Execute(null);
+                else releaseAnalysis.SetResult();
+                await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+                Require(vm.HasAiReport && vm.AiReportSummaryText == previousSummary
+                    && retried.AnalysisOutcome == expected && string.IsNullOrEmpty(retried.AiAnalysisScope),
+                    $"Repeated Full scan {mode} must not discard the last complete report or copy its model scope to incomplete evidence.");
+            }
+
+            Prepare("throw", failCollectionOnce: true);
+            int callsBeforeCollectionFailure = modelCalls;
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(collectionCalls == 1 && modelCalls == callsBeforeCollectionFailure
+                && vm.AuditPhase == ScanPhase.Failed && vm.HasAiReport && vm.AiReportSummaryText == previousSummary,
+                "A collection failure must retain the previous complete report and must not invoke AI with missing evidence.");
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => analysisEntered.Task.IsCompleted);
+            var afterCollectionRetry = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+            Require(collectionCalls == 2 && modelCalls == callsBeforeCollectionFailure + 1
+                && vm.HasAiReport && vm.AiReportSummaryText == previousSummary && vm.IsAiAnalyzing
+                && afterCollectionRetry.AnalysisOutcome == "pending" && string.IsNullOrEmpty(afterCollectionRetry.AiAnalysisScope),
+                "Retrying after a collection failure must keep the previous complete report throughout the next AI analysis.");
+            releaseAnalysis.SetResult();
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(afterCollectionRetry.AnalysisOutcome == "failed" && string.IsNullOrEmpty(afterCollectionRetry.AiAnalysisScope)
+                && vm.HasAiReport && vm.AiReportSummaryText == previousSummary,
+                "A model failure after successful recollection must still retain the report from before the collection failure.");
+
+            Prepare();
+            available = false;
+            int callsBeforeUnavailable = modelCalls;
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(modelCalls == callsBeforeUnavailable && collectionCalls == 1 && vm.AuditPhase == ScanPhase.Failed
+                && Field<AuditResult>(vm, "_auditOverviewSnapshot").AnalysisOutcome == "failed"
+                && vm.AiReportSummaryText == previousSummary && !string.IsNullOrWhiteSpace(vm.AiAnalysisRanText),
+                "Unavailable AI must explicitly stop Full scan after collection while retaining the earlier report.");
+
+            available = true;
+            Prepare(noEvents: true);
+            int callsBeforeEmpty = modelCalls;
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            Require(modelCalls == callsBeforeEmpty && collectionCalls == 1
+                && Field<AuditResult>(vm, "_auditOverviewSnapshot").AnalysisOutcome == "skipped"
+                && !string.IsNullOrWhiteSpace(vm.AiAnalysisRanText) && vm.SidebarWorkflowPercent < 100,
+                "An empty Full scan must report that AI did not run, without recollecting Windows logs or requesting an empty analysis.");
+
+            Prepare("late");
+            vm.StartSelectedScanCommand.Execute(null);
+            await WaitUntil(() => analysisEntered.Task.IsCompleted);
+            vm.FullScanRangeIndex = 0;
+            await WaitUntil(() => !vm.IsAuditing && !vm.IsAiAnalyzing);
+            var selected = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+            releaseAnalysis.SetResult();
+            await Task.Delay(100);
+            await NextRendering();
+            Require(ReferenceEquals(selected, Field<AuditResult>(vm, "_auditOverviewSnapshot"))
+                && selected.ScanStart == end.AddDays(-2) && selected.AiAnalysisScope != currentScope
+                && !vm.IsAiAnalyzing && vm.AuditPhase == ScanPhase.Idle,
+                "A late model result from a cancelled Full scan must not overwrite a newly selected period.");
+            Require(ReferenceEquals(pendingWrites, Field<Task>(vm, "_auditHistoryWriteTask")) && !vm.AiHub.IsEnabled,
+                "Synthetic Full scan regression must neither save user audit history nor enable a real AI service.");
+            EnsureNoWorker();
+        }
+        finally
+        {
+            watchingBusy = false;
+            releaseCollection.TrySetResult();
+            releaseAnalysis.TrySetResult();
+            vm.PropertyChanged -= busyChanged;
+            vm.CancelAuditCommand.Execute(null);
+            Invoke(vm, "CancelAuditForNavigation");
+            availableField.SetValue(vm, originalAvailable);
+            analyzeField.SetValue(vm, originalAnalyze);
+            typeof(AIHubPageViewModel).GetField("_knownAuditAnalysisScope", PrivateInstance).SetValue(vm, originalScope);
+            SetAuditEvidenceSession(vm,
+                new AuditEvidenceSession((_, _, _, _, _) => Task.FromResult(new AuditEvidenceBatch([], [], []))));
+            if (originalSnapshot != null) Invoke(vm, "ApplyHistoricalAudit", originalSnapshot);
+            else Invoke(vm, "ClearAuditSnapshot");
+        }
+        Log("Full scan automatic current-model analysis, continuous clock/busy state, final replacement, repeated failure and period-navigation report retention, unavailable/empty evidence and stale-result isolation PASS");
+
+        void Prepare(string mode = "complete", bool noEvents = false, bool holdCollection = false, bool failCollectionOnce = false)
+        {
+            resultMode = mode;
+            collectionEntered = NewSignal();
+            releaseCollection = NewSignal();
+            analysisEntered = NewSignal();
+            releaseAnalysis = NewSignal();
+            collectionCalls = 0;
+            SetAuditEvidenceSession(vm, new AuditEvidenceSession(async (_, _, _, _, token) =>
+            {
+                int call = Interlocked.Increment(ref collectionCalls);
+                collectionEntered.TrySetResult();
+                if (holdCollection) await releaseCollection.Task.WaitAsync(token);
+                if (failCollectionOnce && call == 1) throw new InvalidOperationException("Synthetic full-scan collection failure");
+                return new AuditEvidenceBatch(noEvents ? [] : events, [], []);
+            }));
+            var previous = new AuditResult
+            {
+                Timestamp = end, ScanStart = end.AddDays(-7), ScanEnd = end, EventsScanned = events.Length,
+                CollectionProfile = AuditCollectionProfile.ForMode(EventLogService.AuditMode.Extended),
+                Findings = AuditRuleEngine.Analyze(events).Select(issue => new AuditIssueEnhanced(issue) { EventRef = "item-000001" }).ToList(),
+                HealthScore = 50, AnalysisOutcome = "ok", AiAnalysisScope = "synthetic-deepseek-scope",
+                AiReportSummary = previousSummary, AiReportMeta = "Previous model metadata", UsedModel = "deepseek",
+            };
+            Invoke(vm, "ApplyHistoricalAudit", previous);
+            vm.SelectedScanModeIndex = 1;
+        }
+
+        long AuditElapsedMilliseconds()
+        {
+            var clock = Field<object>(vm, "_auditClock");
+            return (long)clock.GetType().GetProperty("ElapsedMilliseconds", PrivateInstance).GetValue(clock);
+        }
+
+        static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private static void SetAuditEvidenceSession(AIHubPageViewModel vm, AuditEvidenceSession session)
+    {
+        Field<AuditEvidenceSession>(vm, "_auditEvidenceSession").Dispose();
+        typeof(AIHubPageViewModel).GetField("_auditEvidenceSession", PrivateInstance).SetValue(vm, session);
+    }
     private static async Task CheckReadableOverview(AIHubPage page)
     {
         var vm = page.ViewModel;
@@ -1393,8 +1988,22 @@ internal static class AiHubUxSmoke
         var host = (SplitView)page.FindName("AiHubDetailsHost");
         Invoke(page, "OpenFinding", fixture.Findings[4], page.FindName("AuditBackButton"));
         await WaitUntil(() => host.IsPaneOpen);
-        vm.SetSourceFilter("System");
-        await WaitUntil(() => !host.IsPaneOpen);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void PaneClosed(SplitView sender, object args) => closed.TrySetResult();
+        host.PaneClosed += PaneClosed;
+        try
+        {
+            vm.SetSourceFilter("System");
+            // IsPaneOpen becomes false before the native close animation and its
+            // callback finish. Let that callback release the old selection before
+            // the next fixture opens a new finding in the same SplitView.
+            await WaitUntil(() => !host.IsPaneOpen && closed.Task.IsCompleted);
+            await NextRendering();
+        }
+        finally
+        {
+            host.PaneClosed -= PaneClosed;
+        }
         Require(vm.OverviewFindings.Count == 4, "Filtering out the selected finding must close stale details.");
         vm.AuditResultViewIndex = 0;
         vm.ResetFindingFilters();
@@ -1429,16 +2038,17 @@ internal static class AiHubUxSmoke
         {
             vm.SelectedScanModeIndex = mode;
             vm.FullScanRangeIndex = range;
+            await WaitUntil(() => !vm.IsAuditing);
             Require(vm.SelectedScanLabel == (mode == 1 ? vm.FullScanLabel : vm.FastScanLabel) &&
-                vm.WindowText == originalRange && vm.AllIssues.SequenceEqual(fixture.Findings) &&
-                ReferenceEquals(originalLifetime, Field<CancellationTokenSource>(vm, "_auditCts")) &&
+                (range == originalScope ? vm.AllIssues.SequenceEqual(fixture.Findings) : vm.AllIssues.Count == 0) &&
                 !vm.IsAuditing && !vm.IsAiAnalyzing,
-                "Changing the next scan mode/range must preserve the displayed snapshot and start no work.");
+                "Changing a display period must load matching evidence automatically without an AI request.");
         }
         vm.FullScanRangeIndex = -1;
         vm.SelectedScanModeIndex = 2;
         Require(vm.FullScanRangeIndex == 1 && vm.SelectedScanModeIndex == 0, "Invalid scan drafts must be rejected.");
         vm.FullScanRangeIndex = originalScope;
+        await WaitUntil(() => !vm.IsAuditing);
         vm.SelectedScanModeIndex = originalMode;
         Require(vm.OverviewFindings.Count == 6 && vm.OverviewFindings.Take(3).Select(issue => issue.Key).SequenceEqual(new[] { "synthetic-finding-4", "synthetic-finding-1", "synthetic-finding-3" }),
             "The findings view must show every issue ordered by severity and frequency.");
@@ -1469,6 +2079,12 @@ internal static class AiHubUxSmoke
             ((TextBlock)pane.FindName("EvidenceText")).Text.Contains(priority.EventRef, StringComparison.Ordinal),
             "The detail pane must show the selected finding, its actual result range and recorded references.");
         Invoke(pane, "OnNextClick", next, new RoutedEventArgs());
+        if (title.Text != fixture.Findings[1].DisplayTitle || !previous.IsEnabled)
+        {
+            Log($"DETAILS NEXT mismatch: title={title.Text}; expected={fixture.Findings[1].DisplayTitle}; selected={Field<AuditIssueEnhanced>(page, "_detailsFinding")?.Key}; " +
+                $"paneFinding={Field<AuditIssueEnhanced>(pane, "_finding")?.Key}; previousEnabled={previous.IsEnabled}; open={host.IsPaneOpen}; " +
+                $"orderedKeys={string.Join(",", vm.OverviewFindings.Select(issue => issue.Key))}");
+        }
         Require(title.Text == fixture.Findings[1].DisplayTitle && previous.IsEnabled, "Next must follow severity ordering across the matching result.");
         Invoke(pane, "OnPreviousClick", previous, new RoutedEventArgs());
         Require(title.Text == priority.DisplayTitle && !previous.IsEnabled, "Previous must return to the same first finding.");
@@ -1546,6 +2162,34 @@ internal static class AiHubUxSmoke
         await NextRendering();
         await WaitForPaneLayout(true, "close-button-open", () => Invoke(page, "OpenFinding", fixture.Findings[1], trigger));
         await WaitForPaneLayout(false, "close-button", () => Invoke(pane, "OnCloseClick", pane.FindName("CloseDetailsButton"), new RoutedEventArgs()));
+        var legacyDns = new AuditIssueEnhanced
+        {
+            Key = "legacy-dns-remediation", EventId = "1014", Source = "Microsoft-Windows-DNS-Client", LogName = "System",
+            Title = "Name resolution timed out", TitleZh = "域名解析超时", Severity = "Medium",
+            Description = "An application could not resolve its configured hostname.", DescriptionZh = "应用无法解析配置的域名。",
+            Recommendation = "Previous generic advice", RecommendationZh = "历史泛化建议",
+        };
+        Invoke(vm, "ApplyHistoricalAudit", new AuditResult { Timestamp = DateTime.UtcNow, Findings = new() { legacyDns } });
+        await WaitForPaneLayout(true, "remediation-guide", () => Invoke(page, "OpenFinding", legacyDns, trigger));
+        string checkText = ((TextBlock)pane.FindName("RecommendationText")).Text;
+        Require(checkText.Contains("nslookup", StringComparison.Ordinal) && checkText.Contains("VPN", StringComparison.Ordinal) &&
+            !checkText.Contains("Previous generic advice", StringComparison.Ordinal) && legacyDns.RemediationPlan == null,
+            "Legacy DNS findings must show provider-specific checks and decision criteria without rewriting saved evidence.");
+        foreach (string name in new[] { "ConditionalActionText", "VerificationText", "RecoveryText", "PlanSourceText" })
+        {
+            Require(!string.IsNullOrWhiteSpace(((TextBlock)pane.FindName(name)).Text),
+                "Legacy findings must render separate action, verification, recovery and guide-source sections.");
+        }
+        Require(((Expander)pane.FindName("PreviousAdviceExpander")).Visibility == Visibility.Visible,
+            "Previously saved unstructured advice must remain accessible separately from the diagnostic guide.");
+        ((TextBlock)pane.FindName("CheckPlanLabel")).StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0 });
+        await NextRendering();
+        await Capture(page, "aihub-remediation-checks.png");
+        ((TextBlock)pane.FindName("ConditionalActionLabel")).StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0 });
+        await NextRendering();
+        await Capture(page, "aihub-remediation-actions.png");
+        Log("Legacy DNS remediation renders checks/criteria, conditional action, verification and recovery without mutating history PASS");
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
         await WaitForPaneLayout(true, "tab-change-open", () => Invoke(page, "OpenFinding", fixture.Findings[1], trigger));
         await WaitForPaneLayout(false, "tab-change", () => vm.ActiveTabIndex = 1);
         Require(!host.IsPaneOpen, "Changing tabs must close a finding pane from the previous audit view.");
@@ -1631,6 +2275,110 @@ internal static class AiHubUxSmoke
         }
     }
 
+    private static async Task CheckAiFinalAssessment(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var original = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+        string originalScope = Field<string>(vm, "_knownAuditAnalysisScope");
+        var timestamp = DateTime.UtcNow;
+        SecurityEvent[] events = { new(41, "System", "Kernel-Power", 1, timestamp.AddMinutes(-5), "Synthetic reviewed shutdown") };
+        var rules = AuditRuleEngine.Analyze(events);
+        var snapshot = new AuditResult
+        {
+            Timestamp = timestamp, ScanStart = timestamp.AddDays(-2), ScanEnd = timestamp, EventsScanned = 1,
+            Findings = rules.Select(issue => new AuditIssueEnhanced(issue) { EventRef = "item-000001" }).ToList(),
+            HealthScore = HealthScoreCalculator.Calculate(rules), AnalysisOutcome = "ok", AiAnalysisScope = "previous-synthetic-scope",
+            AiReportSummary = "Previous successful synthetic assessment", AiReportMeta = "previous metadata",
+        };
+        string fingerprint = (string)typeof(AiHubAuditAnalysisService).GetMethod("CreateEvidenceFingerprint", BindingFlags.Static | BindingFlags.NonPublic)
+            .Invoke(null, new object[] { events });
+        var final = new AiHubAuditAnalysisService.AuditAnalysisResult(Array.Empty<AuditIssue>(), false, null)
+        {
+            CompleteEvidenceCoverage = true, AnalyzedEvents = 1, Scope = "current-synthetic-scope", EvidenceFingerprint = fingerprint,
+            UsedModel = "test-model", UsedRoute = "Main", MatchesRequestedModel = true,
+        };
+        try
+        {
+            Invoke(vm, "ApplyHistoricalAudit", snapshot);
+            var oldFindings = vm.AllIssues.ToArray();
+            SetPrivate(vm, "_retainingAiReport", true);
+            SetPrivate(vm, "_persistCurrentAudit", false);
+            Invoke(vm, "ApplyAiAnalysis", final with { CompleteEvidenceCoverage = false, IsPartial = true, Failure = "Synthetic partial failure" }, rules, events, snapshot, false);
+            Require(vm.AllIssues.SequenceEqual(oldFindings) && vm.AiReportSummaryText == "Previous successful synthetic assessment" && snapshot.AnalysisOutcome == "ok",
+                "A partial replacement keeps the last successful findings, report and saved scan outcome.");
+
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", final with { CompleteEvidenceCoverage = false }, rules, events, snapshot, false);
+            Require(vm.AllIssues.SequenceEqual(oldFindings) && snapshot.AnalysisOutcome == "ok",
+                "A result without proven input coverage cannot replace a previously complete report.");
+
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", final with { EvidenceFingerprint = "different-evidence" }, rules, events, snapshot, false);
+            Require(vm.AllIssues.SequenceEqual(oldFindings) && snapshot.AnalysisOutcome == "ok",
+                "A completed result for different evidence cannot replace the displayed successful assessment.");
+
+            var lowered = new AuditIssue
+            {
+                Key = "reviewed-shutdown", EventRef = "item-000001", RelatedEventRefs = new() { "item-000001" },
+                Title = "Reviewed shutdown", TitleZh = "已复核关机", Severity = "Low", Recommendation = "Observe normal shutdown",
+            };
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", final with { Issues = new[] { lowered } }, rules, events, snapshot, false);
+            Require(vm.AllIssues.Count == 1 && vm.AllIssues[0].Severity == "Low" && snapshot.Findings.Single().Severity == "Low" &&
+                snapshot.Timestamp == timestamp && snapshot.AiAnalysisScope == "current-synthetic-scope" && vm.HighCount == 0,
+                "Complete AI review lowers the current scan's rule severity and replaces its model-scope metadata without creating a new scan.");
+
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", final, rules, events, snapshot, false);
+            Require(vm.AllIssues.Count == 0 && snapshot.Findings.Count == 0 && snapshot.Timestamp == timestamp &&
+                vm.HealthScore == 100 && snapshot.HealthScore == 100 && vm.HighCount == 0 && vm.MediumCount == 0 && vm.LowCount == 0 &&
+                vm.AiReportFindings.Count == 0 && snapshot.AnalysisOutcome == "ok" && vm.HasAiReport && !Field<bool>(vm, "_retainingAiReport"),
+                "Complete empty AI assessment removes old current-scan findings and updates health, category counts, AI report and snapshot together.");
+            string acceptedSummary = vm.AiReportSummaryText;
+            SetPrivate(vm, "_retainingAiReport", true);
+            Invoke(vm, "ApplyAiAnalysis", final with { CompleteEvidenceCoverage = false, IsPartial = true }, rules, events, snapshot, false);
+            Require(vm.AllIssues.Count == 0 && snapshot.Findings.Count == 0 && vm.AiReportSummaryText == acceptedSummary,
+                "A later partial retry cannot resurrect rules dismissed by the last complete assessment.");
+            var fallback = final with
+            {
+                UsedModel = "gpt-6-luna", UsedRoute = "Fallback", MatchesRequestedModel = false,
+                Scope = "current-synthetic-scope:actual:fallback-fixture",
+            };
+            Invoke(vm, "ApplyAiAnalysis", fallback, rules, events, snapshot, false);
+            Require(snapshot.UsedModel == "gpt-6-luna" && vm.AiReportMetaText.Contains("gpt-6-luna · Fallback", StringComparison.Ordinal)
+                && snapshot.AnalysisOutcome == "ok" && Field<bool>(vm, "_auditReportNeedsRefresh"),
+                "A complete fallback report must show its actual model and keep the requested primary-model update available.");
+            Invoke(vm, "ApplyHistoricalAudit", snapshot);
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "Restoring fallback history cannot relabel it as a current primary-model report.");
+            Invoke(vm, "ApplyAiAnalysis", final, rules, events, snapshot, false);
+            Invoke(vm, "RefreshAuditReportIdentity", "another-synthetic-scope");
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A new model/policy scope still exposes updating after an empty successful report.");
+            Invoke(vm, "RefreshAuditReportIdentity", "current-synthetic-scope");
+            Require(!Field<bool>(vm, "_auditReportNeedsRefresh"), "The report returns to view mode for its accepted scope.");
+            snapshot.AiAnalysisScope = string.Empty;
+            Invoke(vm, "RefreshAuditReportIdentity", "current-synthetic-scope");
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A legacy report without model scope must request an update after readiness refresh.");
+            snapshot.AiAnalysisScope = "current-synthetic-scope";
+            Invoke(vm, "RefreshAuditReportIdentity", "current-synthetic-scope");
+            await NextRendering();
+            await Capture(page, "aihub-ai-final-assessment.png");
+            Require(!Field<bool>(vm, "_persistCurrentAudit") && !vm.AiHub.IsEnabled,
+                "Final-assessment fixtures neither persist user history nor start an AI route.");
+        }
+        finally
+        {
+            SetPrivate(vm, "_retainingAiReport", false);
+            SetPrivate(vm, "_persistCurrentAudit", false);
+            SetPrivate(vm, "_knownAuditAnalysisScope", originalScope);
+            if (original != null) Invoke(vm, "ApplyHistoricalAudit", original);
+            else Invoke(vm, "ClearAuditSnapshot");
+        }
+        Log("AI final assessment downgrade, empty replacement, partial preservation and scope identity PASS");
+
+        static void SetPrivate(AIHubPageViewModel model, string field, object value) =>
+            typeof(AIHubPageViewModel).GetField(field, PrivateInstance).SetValue(model, value);
+    }
+
     private static async Task CheckAuditSemanticStates(AIHubPage page)
     {
         var vm = page.ViewModel;
@@ -1690,6 +2438,31 @@ internal static class AiHubUxSmoke
             var sparse = (AuditIssueEnhanced)typeof(AIHubPageViewModel).GetMethod("ToEnhanced", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { source });
             Require(sparse.Affected == string.Empty && sparse.RelatedEventRefs.Count == 0,
                 "Nullable AI evidence fields must remain safe for filtering and detail rendering.");
+
+            var completed = FluentAuditFixture();
+            completed.AnalysisOutcome = "ok";
+            completed.AiAnalysisScope = "synthetic-scope";
+            completed.AiReportSummary = "A complete synthetic report that must survive retry failures.";
+            completed.AiReportMeta = "synthetic metadata";
+            completed.Findings[0].EventRef = "item-000001";
+            Invoke(vm, "ApplyHistoricalAudit", completed);
+            Invoke(vm, "RefreshAuditReportIdentity", "synthetic-scope");
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh") == false && vm.HasAiReport,
+                "Identical completed report identity must remain available without an AI run.");
+            string completedSummary = vm.AiReportSummaryText;
+            string completedMeta = vm.AiReportMetaText;
+            var completedFindings = vm.AllIssues.ToArray();
+            foreach (bool cancelled in new[] { false, true })
+            {
+                typeof(AIHubPageViewModel).GetField("_retainingAiReport", PrivateInstance).SetValue(vm, true);
+                typeof(AIHubPageViewModel).GetField("_persistCurrentAudit", PrivateInstance).SetValue(vm, false);
+                Invoke(vm, "CompleteAiInterruption", completed, cancelled);
+                Require(vm.HasAiReport && vm.AiReportSummaryText == completedSummary && vm.AiReportMetaText == completedMeta &&
+                    vm.AllIssues.SequenceEqual(completedFindings) && completed.AnalysisOutcome == "ok" && vm.IsAiSummaryCaution,
+                    "Failed or cancelled regeneration must preserve the last complete report and its snapshot outcome.");
+            }
+            Invoke(vm, "RefreshAuditReportIdentity", "changed-scope");
+            Require(Field<bool>(vm, "_auditReportNeedsRefresh"), "A changed model or policy scope must mark the report for update.");
         }
         finally
         {

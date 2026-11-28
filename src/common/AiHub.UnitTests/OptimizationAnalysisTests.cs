@@ -458,6 +458,26 @@ public sealed class OptimizationAnalysisTests
         Assert.AreEqual(2, engine.Inputs.Count, "Different evidence cannot share a review decision.");
     }
 
+    [TestMethod]
+    [DataRow("notes.docx")]
+    [DataRow(".env")]
+    [DataRow("settings.json")]
+    [DataRow(".git")]
+    public async Task HostRejectsAiDeletionOfProtectedFilesEvenWhenPromptIsIgnored(string name)
+    {
+        using var engine = new FakeEngine();
+        engine.Edit = output => output.Recommendations[0].Action = "delete";
+        var item = Candidate("delete");
+        item.FilePath = @"C:\private\Temp\" + name;
+        item.FileName = name;
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([item], "en-US");
+        Assert.AreEqual("skip", engine.Inputs.Single().AllowedAction);
+        Assert.AreEqual(AiErrorCode.InvalidPayload, result.ErrorCode);
+        Assert.AreEqual(0, result.Items.Count);
+        Assert.IsFalse(item.IsSelected);
+        Assert.IsFalse(item.IsActionable);
+    }
+
     private static TempFileInfo Candidate(string action) => new()
     {
         ItemId = "item-000001",
